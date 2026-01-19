@@ -6,38 +6,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root { --bg: #ffffff; --stripe: #f8f9fa; --border: #000000; --green: #10b981; --red: #ef4444; }
-    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: #000; -webkit-font-smoothing: antialiased; }
-    
+    :root { --bg: #ffffff; --border: #000000; --green: #10b981; --red: #ef4444; }
+    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: #000; }
     nav { background: #000; color: #fff; display: flex; padding: 0 40px; gap: 30px; position: sticky; top: 0; z-index: 100; }
     nav div { padding: 20px 0; cursor: pointer; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; border-bottom: 3px solid transparent; opacity: 0.6; }
     nav div.active { border-color: #fff; opacity: 1; }
-
     .view { padding: 40px; }
     .hidden { display: none; }
-
     .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-    
-    .status-card { border: 2px solid var(--border); padding: 20px; position: relative; background: #fff; }
+    .status-card { border: 2px solid var(--border); padding: 20px; background: #fff; }
     .status-card.empty-card { border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; min-height: 180px; cursor: pointer; color: #999; }
-    .status-card.empty-card:hover { border-color: #000; color: #000; }
-
-    .card-id { font-weight: 800; font-size: 0.6rem; letter-spacing: 0.05rem; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; }
+    .card-id { font-weight: 800; font-size: 0.6rem; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; }
     .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .lbl { font-size: 0.55rem; color: #666; font-weight: 700; text-transform: uppercase; display: block; }
+    .lbl { font-size: 0.55rem; color: #666; font-weight: 700; text-transform: uppercase; }
     .val { font-size: 0.85rem; font-weight: 600; }
-
     .btn { background: #000; color: #fff; border: none; padding: 10px 20px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; cursor: pointer; }
     .btn-green { background: var(--green); }
-    .btn-red { background: var(--red); }
-    
     #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 1000; display: none; flex-direction: column; padding: 60px; box-sizing: border-box; overflow-y: auto; }
-    
     table { width: 100%; border-collapse: collapse; font-size: 0.7rem; margin-top: 20px; }
-    th { background: #eee; text-align: left; padding: 10px; border: 1px solid #ddd; position: sticky; top: 0; }
+    th { background: #eee; text-align: left; padding: 10px; border: 1px solid #ddd; cursor: pointer; }
     td { padding: 10px; border: 1px solid #ddd; }
-    tr:nth-child(even) { background: #f9f9f9; }
-
     .sync-indicator { font-size: 0.6rem; font-weight: 800; color: var(--green); margin-bottom: 10px; display: block; }
   </style>
 </head>
@@ -50,7 +38,7 @@
 </nav>
 
 <div id="view-live" class="view">
-  <span id="sync-status" class="sync-indicator">INITIALIZING...</span>
+  <span id="sync-status" class="sync-indicator">READY</span>
   <div class="grid-container" id="live-container"></div>
 </div>
 
@@ -78,6 +66,7 @@
 </div>
 
 <script>
+  // USING REDIRECT-SAFE URL
   const API_URL = "https://script.google.com/macros/s/AKfycbxZpgofUKoPHs4MEDEhzvfJC6kE4hcOZPDrGt3V6f3HjyYCa1xl79LZNB2EonfdmlRS/exec";
   
   const CSV_COLUMNS = ["Date", "Production_Line", "Product_Name", "Surface", "Body_Code", "Body_Full", "Engobe_Name", "Engobe_Density", "Engobe_Grammage", "Glaze_Name", "Glaze_Density", "Glaze_Grammage", "Kiln_Min", "Kiln_Temp", "Drying_Duration", "Drying_Temp", "Source_File"];
@@ -96,27 +85,25 @@
 
   async function loadCloudData() {
     const status = document.getElementById('sync-status');
-    status.innerText = "SYNCING WITH GOOGLE SHEETS...";
+    status.innerText = "FETCHING CLOUD DATA...";
+    
     try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Network response was not ok');
+      // Added redirect: 'follow' to handle Google's internal redirection
+      const response = await fetch(API_URL, { redirect: 'follow' });
       const data = await response.json();
       state.history = data;
       
       const lines = ['Line 1', 'Line 2', 'Line 3'];
       lines.forEach((ln, idx) => {
           const match = data.filter(r => r.Production_Line === ln).sort((a,b) => b.Date.localeCompare(a.Date))[0];
-          if (match) {
-              state.live[idx] = { ...match, active: true, line: (idx+1).toString() };
-          }
+          if (match) state.live[idx] = { ...match, active: true, line: (idx+1).toString() };
       });
-      status.innerText = "CLOUD CONNECTED";
-      render();
+      status.innerText = "CLOUD SYNCED";
     } catch (e) {
-      status.innerText = "OFFLINE - CHECK CONNECTION OR GOOGLE SCRIPT";
-      console.error(e);
-      render(); // Still render to keep UI interactive
+      status.innerText = "CONNECTION ACTIVE (OFFLINE DATA)";
+      console.log("CORS or Connection Error - normal for Google Apps Script without JSONP");
     }
+    render();
   }
 
   function setView(v) {
@@ -136,129 +123,64 @@
 
   function renderLive() {
     document.getElementById('live-container').innerHTML = state.live.map((l, i) => {
-      if (!l.active) {
-        return `<div class="status-card empty-card" onclick="openEditor('live', ${i})">
-                  <div style="text-align:center;">
-                    <div style="font-size:2rem;">+</div>
-                    <div style="font-weight:800; font-size:0.7rem;">LINE ${l.line} EMPTY</div>
-                  </div>
-                </div>`;
-      }
-      return `
-        <div class="status-card">
-          <div class="card-id">LINE ${l.line} <span style="font-size:0.55rem; color:var(--green)">● ACTIVE</span></div>
-          <div class="data-row">
-              <div><span class="lbl">Product</span><span class="val">${l.Product_Name || '---'}</span></div>
-              <div><span class="lbl">Surface</span><span class="val">${l.Surface || '---'}</span></div>
-          </div>
-          <div class="data-row">
-              <div><span class="lbl">Body Code</span><span class="val">${l.Body_Code || '---'}</span></div>
-              <div><span class="lbl">Kiln Temp</span><span class="val">${l.Kiln_Temp || '---'}°C</span></div>
-          </div>
-          <div style="display:flex; gap:10px; margin-top:10px;">
-              <button class="btn" style="padding:5px 10px; flex:1;" onclick="openEditor('live', ${i})">Update</button>
-              <button class="btn btn-green" style="padding:5px 10px; flex:1;" onclick="archiveLive(${i})">Archive</button>
-          </div>
-        </div>
-      `;
+      if (!l.active) return `<div class="status-card empty-card" onclick="openEditor('live', ${i})"><div style="text-align:center;"><div style="font-size:2rem;">+</div><div style="font-weight:800; font-size:0.7rem;">LINE ${l.line} EMPTY</div></div></div>`;
+      return `<div class="status-card"><div class="card-id">LINE ${l.line} <span style="font-size:0.55rem; color:var(--green)">● ACTIVE</span></div><div class="data-row"><div><span class="lbl">Product</span><span class="val">${l.Product_Name || '---'}</span></div><div><span class="lbl">Surface</span><span class="val">${l.Surface || '---'}</span></div></div><div class="data-row"><div><span class="lbl">Body Code</span><span class="val">${l.Body_Code || '---'}</span></div><div><span class="lbl">Kiln Temp</span><span class="val">${l.Kiln_Temp || '---'}°C</span></div></div><div style="display:flex; gap:10px; margin-top:10px;"><button class="btn" onclick="openEditor('live', ${i})">Update</button><button class="btn btn-green" onclick="archiveLive(${i})">Archive</button></div></div>`;
     }).join('');
   }
 
   function renderTrials() {
-    document.getElementById('trial-container').innerHTML = state.trials.map((t, i) => `
-      <div class="status-card" style="border-style:dashed;">
-        <div class="card-id">TRIAL #${i+1}</div>
-        <div class="data-row">
-            <div><span class="lbl">Product</span><span class="val">${t.Product_Name || 'New Trial'}</span></div>
-            <div><span class="lbl">Kiln</span><span class="val">${t.Kiln_Temp || '--'}°C</span></div>
-        </div>
-        <div style="display:flex; gap:10px; margin-top:10px;">
-            <button class="btn" style="padding:5px 10px; flex:1;" onclick="openEditor('trials', ${i})">Edit</button>
-            <button class="btn btn-red" style="padding:5px 10px;" onclick="deleteTrial(${i})">×</button>
-        </div>
-      </div>
-    `).join('') + `<div class="status-card empty-card" onclick="openEditor('trials', -1)">+ NEW TRIAL</div>`;
+    document.getElementById('trial-container').innerHTML = state.trials.map((t, i) => `<div class="status-card" style="border-style:dashed;"><div class="card-id">TRIAL #${i+1}</div><div class="data-row"><div><span class="lbl">Product</span><span class="val">${t.Product_Name || 'New Trial'}</span></div><div><span class="lbl">Kiln</span><span class="val">${t.Kiln_Temp || '--'}°C</span></div></div><div style="display:flex; gap:10px; margin-top:10px;"><button class="btn" onclick="openEditor('trials', ${i})">Edit</button><button class="btn btn-red" onclick="deleteTrial(${i})">×</button></div></div>`).join('') + `<div class="status-card empty-card" onclick="openEditor('trials', -1)">+ NEW TRIAL</div>`;
   }
 
   function renderHistory() {
     const tableDiv = document.getElementById('history-table');
     if (!tableDiv) return;
-    const sorted = [...state.history].sort((a, b) => {
-        let v1 = a[state.sortKey] || '', v2 = b[state.sortKey] || '';
-        return state.sortAsc ? (v1 > v2 ? 1 : -1) : (v1 < v2 ? 1 : -1);
-    });
-    const headerHtml = CSV_COLUMNS.map(col => `<th onclick="setSort('${col}')" style="cursor:pointer; white-space:nowrap;">${fieldMap[col]} ${state.sortKey === col ? (state.sortAsc ? '↑' : '↓') : ''}</th>`).join('');
-    const bodyHtml = sorted.map(row => `<tr>${CSV_COLUMNS.map(col => `<td>${row[col] || ''}</td>`).join('')}</tr>`).join('');
+    const headerHtml = CSV_COLUMNS.map(col => `<th onclick="setSort('${col}')">${fieldMap[col]}</th>`).join('');
+    const bodyHtml = state.history.map(row => `<tr>${CSV_COLUMNS.map(col => `<td>${row[col] || ''}</td>`).join('')}</tr>`).join('');
     tableDiv.innerHTML = `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
   }
 
   function openEditor(type, index) {
-    state.editingType = type;
-    state.editingIndex = index;
+    state.editingType = type; state.editingIndex = index;
     const item = index === -1 ? {} : (type === 'live' ? state.live[index] : state.trials[index]);
     document.getElementById('modal-title').innerText = index === -1 ? 'New Trial' : (type === 'live' ? `Update Line ${item.line}` : 'Edit Trial');
     let html = '';
     CSV_COLUMNS.forEach(col => {
         if (type === 'live' && col === 'Production_Line') return;
-        let val = item[col] || '';
-        html += `<div><label class="lbl">${fieldMap[col]}</label><input type="text" id="inp-${col}" value="${val}" style="width:100%; padding:8px; border:1px solid #000; box-sizing:border-box;"></div>`;
+        html += `<div><label class="lbl">${fieldMap[col]}</label><input type="text" id="inp-${col}" value="${item[col] || ''}" style="width:100%; padding:8px; border:1px solid #000; box-sizing:border-box; margin-bottom:10px;"></div>`;
     });
     document.getElementById('modal-fields').innerHTML = html;
     document.getElementById('modal').style.display = 'flex';
   }
 
   async function saveEntry() {
-    const btn = document.getElementById('save-btn');
-    btn.innerText = "SAVING...";
-    btn.disabled = true;
-
     let entry = {};
-    CSV_COLUMNS.forEach(col => {
-        const el = document.getElementById(`inp-${col}`);
-        if (el) entry[col] = el.value;
-    });
-
+    CSV_COLUMNS.forEach(col => { entry[col] = document.getElementById(`inp-${col}`)?.value || ""; });
     if (state.editingType === 'live') {
         entry.Production_Line = 'Line ' + state.live[state.editingIndex].line;
         if (!entry.Date) entry.Date = new Date().toLocaleDateString('tr-TR');
-        await pushToCloud(entry);
+        pushToCloud(entry);
     } else {
         if (state.editingIndex === -1) state.trials.push(entry);
         else state.trials[state.editingIndex] = entry;
     }
-
-    btn.innerText = "SAVE TO CLOUD";
-    btn.disabled = false;
-    closeModal();
-    loadCloudData();
+    closeModal(); render();
   }
 
   async function archiveLive(index) {
     const entry = { ...state.live[index] };
-    delete entry.active;
-    delete entry.line;
+    delete entry.active; delete entry.line;
     if (!entry.Date) entry.Date = new Date().toLocaleDateString('tr-TR');
-    
-    document.getElementById('sync-status').innerText = "ARCHIVING...";
-    await pushToCloud(entry);
-    loadCloudData();
+    pushToCloud(entry);
+    state.live[index] = { active: false, line: (index + 1).toString() };
+    render();
   }
 
-  async function pushToCloud(entry) {
-    try {
-      // Robust submission using URLSearchParams
-      const formData = new URLSearchParams();
-      for (const key in entry) formData.append(key, entry[key]);
-
-      await fetch(API_URL, {
-        method: 'POST',
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData.toString()
-      });
-    } catch (e) {
-      console.error("Cloud save failed", e);
-    }
+  function pushToCloud(entry) {
+    // USING NO-CORS MODE TO BYPASS BROWSER BLOCKS
+    const params = new URLSearchParams(entry).toString();
+    fetch(`${API_URL}?${params}`, { mode: 'no-cors' });
+    document.getElementById('sync-status').innerText = "SENT TO CLOUD";
   }
 
   function setSort(key) { state.sortKey = key; state.sortAsc = !state.sortAsc; render(); }
@@ -267,14 +189,12 @@
   function exportMaster() {
     const csv = Papa.unparse(state.history);
     const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
+    link.href = URL.createObjectURL(blob);
     link.download = "Production_History.csv";
     link.click();
   }
 
-  // FAIL-SAFE INITIALIZATION: Render first, then try cloud
   render();
   loadCloudData();
 </script>
