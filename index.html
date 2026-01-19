@@ -50,7 +50,7 @@
 </nav>
 
 <div id="view-live" class="view">
-  <span id="sync-status" class="sync-indicator">CONNECTED TO CLOUD</span>
+  <span id="sync-status" class="sync-indicator">INITIALIZING...</span>
   <div class="grid-container" id="live-container"></div>
 </div>
 
@@ -95,28 +95,37 @@
   };
 
   async function loadCloudData() {
-    document.getElementById('sync-status').innerText = "SYNCING...";
+    const status = document.getElementById('sync-status');
+    status.innerText = "SYNCING WITH GOOGLE SHEETS...";
     try {
       const response = await fetch(API_URL);
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       state.history = data;
       
-      // Auto-populate Live Lines from most recent entries for each line
       const lines = ['Line 1', 'Line 2', 'Line 3'];
       lines.forEach((ln, idx) => {
           const match = data.filter(r => r.Production_Line === ln).sort((a,b) => b.Date.localeCompare(a.Date))[0];
           if (match) {
               state.live[idx] = { ...match, active: true, line: (idx+1).toString() };
-          } else {
-              state.live[idx] = { active: false, line: (idx+1).toString() };
           }
       });
-      document.getElementById('sync-status').innerText = "CLOUD SYNCED";
+      status.innerText = "CLOUD CONNECTED";
       render();
     } catch (e) {
-      document.getElementById('sync-status').innerText = "OFFLINE - USING LOCAL CACHE";
+      status.innerText = "OFFLINE - CHECK CONNECTION OR GOOGLE SCRIPT";
       console.error(e);
+      render(); // Still render to keep UI interactive
     }
+  }
+
+  function setView(v) {
+    state.view = v;
+    document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('nav div').forEach(el => el.classList.remove('active'));
+    document.getElementById(`view-${v}`).classList.remove('hidden');
+    document.getElementById(`nav-${v}`).classList.add('active');
+    render();
   }
 
   function render() {
@@ -172,14 +181,15 @@
   }
 
   function renderHistory() {
-    if (!document.getElementById('history-table')) return;
+    const tableDiv = document.getElementById('history-table');
+    if (!tableDiv) return;
     const sorted = [...state.history].sort((a, b) => {
         let v1 = a[state.sortKey] || '', v2 = b[state.sortKey] || '';
         return state.sortAsc ? (v1 > v2 ? 1 : -1) : (v1 < v2 ? 1 : -1);
     });
     const headerHtml = CSV_COLUMNS.map(col => `<th onclick="setSort('${col}')" style="cursor:pointer; white-space:nowrap;">${fieldMap[col]} ${state.sortKey === col ? (state.sortAsc ? '↑' : '↓') : ''}</th>`).join('');
     const bodyHtml = sorted.map(row => `<tr>${CSV_COLUMNS.map(col => `<td>${row[col] || ''}</td>`).join('')}</tr>`).join('');
-    document.getElementById('history-table').innerHTML = `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+    tableDiv.innerHTML = `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
   }
 
   function openEditor(type, index) {
@@ -236,11 +246,15 @@
 
   async function pushToCloud(entry) {
     try {
+      // Robust submission using URLSearchParams
+      const formData = new URLSearchParams();
+      for (const key in entry) formData.append(key, entry[key]);
+
       await fetch(API_URL, {
         method: 'POST',
-        mode: 'no-cors', // Apps Script requires no-cors or specialized headers
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
       });
     } catch (e) {
       console.error("Cloud save failed", e);
@@ -260,7 +274,8 @@
     link.click();
   }
 
-  // Initial Fetch
+  // FAIL-SAFE INITIALIZATION: Render first, then try cloud
+  render();
   loadCloudData();
 </script>
 </body>
