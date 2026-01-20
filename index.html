@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Anatolia — Command Center v3.1</title>
+  <title>Anatolia — Command Center v4</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
@@ -13,27 +13,31 @@
     nav div.active { border-color: #fff; opacity: 1; }
     .view { padding: 40px; }
     .hidden { display: none; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
-    .card { border: 2px solid #000; padding: 24px; background: #fff; display: flex; flex-direction: column; min-height: 380px; box-shadow: 6px 6px 0px #000; }
-    .card-head { font-weight: 800; font-size: 0.65rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; }
-    .row { margin-bottom: 15px; }
-    .main-val { font-size: 1rem; font-weight: 800; display: block; }
-    .sub-val { font-size: 0.7rem; font-weight: 400; color: #666; margin-left: 5px; }
-    .lbl { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; color: #999; display: block; margin-bottom: 4px; }
-    .check-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
-    .check-item { font-size: 0.55rem; font-weight: 800; padding: 4px 8px; border: 1px solid #000; border-radius: 3px; opacity: 0.15; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; }
+    
+    .card { border: 2px solid #000; padding: 24px; background: #fff; display: flex; flex-direction: column; min-height: 350px; box-shadow: 6px 6px 0px #000; }
+    .card-head { font-weight: 800; font-size: 0.8rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .row { margin-bottom: 12px; }
+    .main-val { font-size: 0.95rem; font-weight: 800; display: inline-block; }
+    .sub-val { font-size: 0.7rem; font-weight: 400; color: #666; margin-left: 6px; font-style: italic; }
+    .lbl { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; color: #999; display: block; margin-bottom: 2px; }
+
+    .check-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
+    .check-item { font-size: 0.55rem; font-weight: 800; padding: 4px 10px; border: 1px solid #000; border-radius: 2px; opacity: 0.15; }
     .check-item.active { background: #000; color: #fff; opacity: 1; }
-    .btn { background: #000; color: #fff; border: none; padding: 12px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; cursor: pointer; margin-top: auto; }
+    
+    .btn { background: #000; color: #fff; border: none; padding: 12px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; cursor: pointer; margin-top: auto; }
     .btn-green { background: var(--green); }
     .btn-blue { background: var(--blue); }
+    
     #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 1000; display: none; padding: 40px; box-sizing: border-box; overflow-y: auto; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    #status-badge { position: fixed; bottom: 20px; right: 20px; background: #000; color: #fff; padding: 5px 12px; font-size: 0.6rem; font-weight: 800; z-index: 1000; }
+    #sync-status { position: fixed; bottom: 20px; right: 20px; font-size: 0.6rem; font-weight: 800; background: #000; color: #fff; padding: 5px 12px; z-index: 200; }
   </style>
 </head>
 <body>
 
-<div id="status-badge">READY</div>
+<div id="sync-status">READY</div>
 
 <nav>
   <div id="nav-live" class="active" onclick="setView('live')">Live Production</div>
@@ -44,20 +48,23 @@
 <div id="view-live" class="view"><div class="grid" id="live-container"></div></div>
 <div id="view-trials" class="view hidden"><div class="grid" id="trial-container"></div></div>
 <div id="view-history" class="view hidden">
-    <input type="text" id="search" placeholder="Search product name..." oninput="render()" style="width:100%; padding:15px; margin-bottom:20px; border:2px solid #000; font-family:inherit;">
+    <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <input type="text" id="search" placeholder="Search product..." oninput="render()" style="flex:1; padding:12px; border:2px solid #000;">
+        <button class="btn btn-green" onclick="loadData()" style="margin-top:0;">Refresh</button>
+    </div>
     <div id="history-table"></div>
 </div>
 
 <div id="modal">
-  <h2 id="modal-title" style="font-weight:800; text-transform:uppercase;">New Entry</h2>
+  <h2 id="modal-title" style="font-weight:800; text-transform:uppercase;">Entry Editor</h2>
   <div class="form-grid" id="fields"></div>
   <div id="trial-extras" class="hidden">
-      <h4 style="margin-top:20px; font-size:0.6rem; text-transform:uppercase;">Ink Effects / Digital Graphic</h4>
+      <h4 style="margin-top:20px; font-size:0.6rem; text-transform:uppercase;">Ink Effects (Graphic)</h4>
       <div class="check-group">
-          <label><input type="checkbox" id="inp-Digital_White_1"> DW 1</label>
-          <label><input type="checkbox" id="inp-Digital_White_2"> DW 2</label>
-          <label><input type="checkbox" id="inp-Glu"> GLU</label>
-          <label><input type="checkbox" id="inp-Gloss"> GLOSS</label>
+          <label><input type="checkbox" id="chk-Digital_White_1"> DW 1</label>
+          <label><input type="checkbox" id="chk-Digital_White_2"> DW 2</label>
+          <label><input type="checkbox" id="chk-Glu"> GLU</label>
+          <label><input type="checkbox" id="chk-Gloss"> GLOSS</label>
       </div>
   </div>
   <div style="margin-top:30px; display:flex; gap:10px;">
@@ -67,14 +74,13 @@
 </div>
 
 <script>
-  // PASTE YOUR NEW DEPLOYMENT URL HERE
-  const API_URL = "https://script.google.com/macros/s/AKfycbwJXYYqKH1VRfeveACqbgEG7_4E5b7fE1kmz-s1vTpcL2cOtfgPBpPIlB1xpNN57O30/exec";
-  const COLS = ["Date", "Production_Line", "Product_Name", "Size", "Surface", "Body_Code", "Engobe_Name", "Engobe_Grammage", "Glaze_Name", "Glaze_Grammage", "Kiln_Temp", "Kiln_Min", "Status"];
+  const API_URL = "https://script.google.com/macros/s/AKfycbzpmNMdInyC6XmHw1KJZvXu4zIYi9QxB_WcbK0w3iTm9RSYWMPeL6votMwm8_wOYqg/exec";
+  const COLS = ["Date", "Production_Line", "Product_Name", "Size", "Surface", "Body_Code", "Engobe_Name", "Engobe_Density", "Engobe_Grammage", "Glaze_Name", "Glaze_Density", "Glaze_Grammage", "Kiln_Min", "Kiln_Temp", "Drying_Duration", "Drying_Temp", "Status", "Source_File"];
   
   let state = { view: 'live', history: [], trials: [] };
 
   function loadData() {
-    document.getElementById('status-badge').innerText = "SYNCING...";
+    document.getElementById('sync-status').innerText = "SYNCING...";
     const script = document.createElement('script');
     script.src = `${API_URL}?callback=handleResponse&t=${Date.now()}`;
     document.body.appendChild(script);
@@ -83,7 +89,7 @@
   window.handleResponse = function(data) {
     state.history = data.history || [];
     state.trials = data.trials || [];
-    document.getElementById('status-badge').innerText = "CONNECTED";
+    document.getElementById('sync-status').innerText = "CONNECTED";
     render();
   };
 
@@ -97,61 +103,59 @@
   }
 
   function render() {
-    // Standardize Status Checks (Point 9)
-    const live = state.history.filter(i => String(i.Status).trim().toLowerCase() === "in production");
-    document.getElementById('live-container').innerHTML = live.map(i => renderCard(i, "live")).join('') + renderAddCard("In Production");
+    const search = document.getElementById('search').value.toLowerCase();
+    
+    // Filter logic
+    const liveItems = state.history.filter(i => String(i.Status).trim().toLowerCase() === "in production");
+    const trialItems = state.history.filter(i => String(i.Status).trim().toLowerCase() === "trial");
+    const histItems = state.history.filter(i => String(i.Status).trim().toLowerCase() === "produced" && String(i.Product_Name).toLowerCase().includes(search));
 
-    const trials = state.history.filter(i => String(i.Status).trim().toLowerCase() === "trial");
-    document.getElementById('trial-container').innerHTML = trials.map(i => renderCard(i, "trial")).join('') + renderAddCard("Trial");
+    document.getElementById('live-container').innerHTML = liveItems.map(i => renderCard(i, 'live')).join('') + renderAddCard("In Production");
+    document.getElementById('trial-container').innerHTML = trialItems.map(i => renderCard(i, 'trial')).join('') + renderAddCard("Trial");
 
-    if (state.view === 'history') {
-        const search = document.getElementById('search').value.toLowerCase();
-        const hist = state.history.filter(i => String(i.Status).trim().toLowerCase() === "produced" && String(i.Product_Name).toLowerCase().includes(search));
-        let html = '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;"><thead><tr style="background:#eee;">';
-        COLS.forEach(c => html += `<th style="padding:10px; border:1px solid #ddd;">${c}</th>`);
-        html += '</tr></thead><tbody>';
-        hist.forEach(row => {
-            html += '<tr>';
-            COLS.forEach(c => html += `<td style="padding:10px; border:1px solid #ddd;">${row[c] || ''}</td>`);
-            html += '</tr>';
-        });
-        html += '</tbody></table>';
-        document.getElementById('history-table').innerHTML = html;
-    }
+    // History Table
+    let table = `<table style="width:100%; border-collapse:collapse; font-size:0.65rem;"><thead><tr style="background:#eee;">`;
+    COLS.forEach(c => table += `<th style="padding:10px; border:1px solid #ddd; text-align:left;">${c}</th>`);
+    table += `</tr></thead><tbody>`;
+    histItems.forEach(row => {
+        table += `<tr>`;
+        COLS.forEach(c => table += `<td style="padding:10px; border:1px solid #ddd;">${row[c] || ''}</td>`);
+        table += `</tr>`;
+    });
+    document.getElementById('history-table').innerHTML = table + `</tbody></table>`;
   }
 
   function renderCard(i, mode) {
     const t = state.trials.find(x => x.Product_Name === i.Product_Name) || {};
-    const isDW1 = String(t.Digital_White_1).toUpperCase() === "TRUE";
-    const isDW2 = String(t.Digital_White_2).toUpperCase() === "TRUE";
-    const isGLU = String(t.Glu).toUpperCase() === "TRUE";
-    const isGLOS = String(t.Gloss).toUpperCase() === "TRUE";
-
     return `
       <div class="card">
-        <div class="card-head">LINE ${i.Production_Line} <span>${i.Date}</span></div>
-        <div class="row"><span class="lbl">Product</span><span class="main-val">${i.Product_Name}<span class="sub-val">${i.Size}</span></span></div>
-        <div class="row"><span class="lbl">Body & Surface</span><span class="main-val">${i.Body_Code}<span class="sub-val">${i.Surface}</span></span></div>
-        <div class="row"><span class="lbl">Engobe</span><span class="main-val">${i.Engobe_Name}<span class="sub-val">${i.Engobe_Grammage} gr</span></span></div>
-        <div class="row"><span class="lbl">Glaze</span><span class="main-val">${i.Glaze_Name}<span class="sub-val">${i.Glaze_Grammage} gr</span></span></div>
-        <div class="row"><span class="lbl">Kiln</span><span class="main-val">${i.Kiln_Temp}°C <span class="sub-val">(${i.Kiln_Min} min)</span></span></div>
+        <div class="card-head">
+          <span>${i.Product_Name}</span>
+          <span style="font-size:0.6rem; opacity:0.6;">${i.Size} | ${i.Date}</span>
+        </div>
+        
+        <div class="row"><span class="lbl">Production Line & Body Code</span><span class="main-val">${i.Production_Line}<span class="sub-val">${i.Body_Code}</span></span></div>
+        <div class="row"><span class="lbl">Engobe Name</span><span class="main-val">${i.Engobe_Name}<span class="sub-val">${i.Engobe_Grammage}</span></span></div>
+        <div class="row"><span class="lbl">Protection Glaze</span><span class="main-val">${i.Glaze_Name}<span class="sub-val">${i.Glaze_Grammage} / ${i.Glaze_Density}</span></span></div>
+        <div class="row"><span class="lbl">Kiln Parameters</span><span class="main-val">${i.Kiln_Temp}°C<span class="sub-val">(${i.Kiln_Min} min)</span></span></div>
+        <div class="row"><span class="lbl">Surface</span><span class="main-val">${i.Surface}</span></div>
         
         ${mode === 'trial' ? `
-          <div class="check-group">
-            <div class="check-item ${isDW1 ? 'active' : ''}">DW1</div>
-            <div class="check-item ${isDW2 ? 'active' : ''}">DW2</div>
-            <div class="check-item ${isGLU ? 'active' : ''}">GLU</div>
-            <div class="check-item ${isGLOS ? 'active' : ''}">GLOSS</div>
-          </div>` : ''}
+        <div class="check-group">
+            <div class="check-item ${t.Digital_White_1 == "TRUE" ? 'active' : ''}">DW1</div>
+            <div class="check-item ${t.Digital_White_2 == "TRUE" ? 'active' : ''}">DW2</div>
+            <div class="check-item ${t.Glu == "TRUE" ? 'active' : ''}">GLU</div>
+            <div class="check-item ${t.Gloss == "TRUE" ? 'active' : ''}">GLOSS</div>
+        </div>` : ''}
 
         <button class="btn ${mode === 'live' ? 'btn-blue' : 'btn-green'}" onclick="updateStatus('${i.Product_Name}', '${mode === 'live' ? 'Produced' : 'In Production'}')">
-          ${mode === 'live' ? 'Finish' : 'Move to Live'}
+          ${mode === 'live' ? 'Finish Production' : 'Move to Live'}
         </button>
       </div>`;
   }
 
   function renderAddCard(s) {
-    return `<div class="card" style="border-style:dashed; justify-content:center; align-items:center; opacity:0.3; cursor:pointer;" onclick="openModal('${s}')">
+    return `<div class="card" style="border-style:dashed; justify-content:center; align-items:center; opacity:0.4; cursor:pointer;" onclick="openModal('${s}')">
               <span style="font-size:2rem;">+</span><span style="font-weight:800;">ADD ${s.toUpperCase()}</span>
             </div>`;
   }
@@ -168,24 +172,20 @@
   }
 
   function submitEntry() {
-    document.getElementById('status-badge').innerText = "SAVING...";
     let p = { method: "SAVE" };
     COLS.forEach(c => p[c] = document.getElementById(`inp-${c}`).value);
     if (state.curStatus.toLowerCase() === "trial") {
-        ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => p[id] = document.getElementById(`inp-${id}`).checked ? "TRUE" : "FALSE");
+        ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => {
+            p[id] = document.getElementById(`chk-${id}`).checked ? "TRUE" : "FALSE";
+        });
     }
-    
-    // Direct browser hit for faster sync
-    fetch(`${API_URL}?${new URLSearchParams(p).toString()}`, { mode: 'no-cors' })
-    .then(() => {
+    fetch(`${API_URL}?${new URLSearchParams(p).toString()}`, { mode: 'no-cors' }).then(() => {
         setTimeout(() => { closeModal(); loadData(); }, 1200);
     });
   }
 
   function updateStatus(name, s) {
-    document.getElementById('status-badge').innerText = "UPDATING...";
-    fetch(`${API_URL}?method=UPDATE_STATUS&Product_Name=${encodeURIComponent(name)}&NewStatus=${s}`, { mode: 'no-cors' })
-    .then(() => {
+    fetch(`${API_URL}?method=UPDATE_STATUS&Product_Name=${encodeURIComponent(name)}&NewStatus=${s}`, { mode: 'no-cors' }).then(() => {
         setTimeout(() => { loadData(); }, 1200);
     });
   }
