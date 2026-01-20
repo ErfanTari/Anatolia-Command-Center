@@ -2,38 +2,213 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Anatolia — Command Center v4.1</title>
+  <title>Anatolia — Command Center v4.2</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root { --bg: #ffffff; --border: #000000; --green: #10b981; --blue: #3b82f6; --gray: #f9fafb; }
-    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: #000; }
-    nav { background: #000; color: #fff; display: flex; padding: 0 40px; gap: 30px; position: sticky; top: 0; z-index: 100; }
-    nav div { padding: 20px 0; cursor: pointer; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; border-bottom: 3px solid transparent; opacity: 0.6; }
+    :root { 
+      --bg: #f4f7f6; 
+      --card-bg: #ffffff;
+      --text-main: #1a1a1a;
+      --text-sub: #6b7280;
+      --accent: #000000;
+      --green: #10b981; 
+      --blue: #3b82f6; 
+      --red: #ef4444;
+      --border: #e5e7eb;
+    }
+
+    body { 
+      font-family: 'Inter', sans-serif; 
+      margin: 0; 
+      background: var(--bg); 
+      color: var(--text-main); 
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Navigation */
+    nav { 
+      background: var(--accent); 
+      color: #fff; 
+      display: flex; 
+      padding: 0 40px; 
+      gap: 40px; 
+      position: sticky; 
+      top: 0; 
+      z-index: 100;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    nav div { 
+      padding: 24px 0; 
+      cursor: pointer; 
+      font-size: 0.75rem; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      letter-spacing: 0.05em;
+      border-bottom: 3px solid transparent; 
+      transition: all 0.2s ease;
+      opacity: 0.7;
+    }
+    nav div:hover { opacity: 1; }
     nav div.active { border-color: #fff; opacity: 1; }
-    .view { padding: 40px; }
+
+    .view { padding: 40px; max-width: 1400px; margin: 0 auto; }
     .hidden { display: none; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
-    .card { border: 2px solid #000; padding: 24px; background: #fff; display: flex; flex-direction: column; min-height: 380px; box-shadow: 4px 4px 0px #000; }
-    .card-head { font-weight: 800; font-size: 0.8rem; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .row { margin-bottom: 12px; }
-    .main-val { font-size: 0.95rem; font-weight: 800; display: block; line-height: 1.2; }
-    .sub-val { font-size: 0.7rem; font-weight: 400; color: #666; margin-left: 5px; }
-    .lbl { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; color: #999; display: block; margin-bottom: 4px; }
-    .check-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
-    .check-item { font-size: 0.55rem; font-weight: 800; padding: 4px 8px; border: 1px solid #000; border-radius: 3px; opacity: 0.2; }
-    .check-item.active { background: #000; color: #fff; opacity: 1; }
-    .btn { background: #000; color: #fff; border: none; padding: 12px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; cursor: pointer; margin-top: auto; }
-    .btn-green { background: var(--green); }
-    .btn-blue { background: var(--blue); }
-    #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 1000; display: none; padding: 40px; box-sizing: border-box; overflow-y: auto; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    #sync-status { position: fixed; bottom: 20px; right: 20px; font-size: 0.6rem; font-weight: 800; background: #000; color: #fff; padding: 5px 10px; z-index: 200; }
+    
+    /* Grid & Cards */
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); 
+      gap: 24px; 
+    }
+    
+    .card { 
+      background: var(--card-bg); 
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px; 
+      display: flex; 
+      flex-direction: column; 
+      min-height: 400px; 
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    }
+    
+    .card-head { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .line-badge {
+      background: #f3f4f6;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+    .date-val { font-size: 0.7rem; color: var(--text-sub); font-weight: 500; }
+
+    /* Typography */
+    .row { margin-bottom: 16px; }
+    .lbl { 
+      font-size: 0.6rem; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      color: var(--text-sub); 
+      letter-spacing: 0.025em;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .main-val { font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: block; }
+    .sub-val { 
+      font-size: 0.75rem; 
+      font-weight: 500; 
+      color: var(--blue); 
+      background: #eff6ff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      display: inline-block;
+    }
+
+    /* R&D Checkboxes */
+    .check-group { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 10px; 
+      margin-top: 20px; 
+      padding-top: 20px; 
+      border-top: 1px dashed var(--border); 
+    }
+    .check-item { 
+      font-size: 0.6rem; 
+      font-weight: 700; 
+      padding: 6px 12px; 
+      border: 1px solid var(--border); 
+      border-radius: 20px; 
+      color: var(--text-sub);
+      background: #fafafa;
+    }
+    .check-item.active { 
+      background: var(--accent); 
+      color: #fff; 
+      border-color: var(--accent);
+    }
+
+    /* Buttons */
+    .btn { 
+      border-radius: 8px;
+      border: none; 
+      padding: 14px; 
+      font-size: 0.7rem; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      cursor: pointer; 
+      transition: all 0.2s ease;
+      margin-top: auto;
+      text-align: center;
+    }
+    .btn-green { background: var(--green); color: white; }
+    .btn-green:hover { background: #059669; }
+    .btn-blue { background: var(--blue); color: white; }
+    .btn-blue:hover { background: #2563eb; }
+    
+    .empty-card { 
+      border: 2px dashed #cbd5e1; 
+      background: transparent;
+      justify-content: center; 
+      align-items: center; 
+      color: var(--text-sub);
+      box-shadow: none;
+    }
+    .empty-card:hover { background: #fff; border-color: var(--accent); color: var(--accent); }
+
+    /* Modal & Table */
+    #modal { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      z-index: 1000; display: none; padding: 40px; box-sizing: border-box; 
+    }
+    .modal-content {
+      background: #fff;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-grid input {
+      width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+    }
+
+    table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    th { background: #f9fafb; padding: 16px; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; text-align: left; color: var(--text-sub); border-bottom: 1px solid var(--border); }
+    td { padding: 16px; font-size: 0.75rem; background: #fff; border-bottom: 1px solid var(--border); }
+
+    #sync-status { 
+      position: fixed; bottom: 24px; right: 24px; 
+      font-size: 0.65rem; font-weight: 700; 
+      background: #fff; color: var(--text-main); 
+      padding: 8px 16px; border-radius: 50px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; }
   </style>
 </head>
 <body>
 
-<div id="sync-status">READY</div>
+<div id="sync-status"><div class="status-dot"></div> <span id="status-text">INITIALIZING</span></div>
 
 <nav>
   <div id="nav-live" class="active" onclick="setView('live')">Live Production</div>
@@ -44,37 +219,41 @@
 <div id="view-live" class="view"><div class="grid" id="live-container"></div></div>
 <div id="view-trials" class="view hidden"><div class="grid" id="trial-container"></div></div>
 <div id="view-history" class="view hidden">
-    <input type="text" id="search" placeholder="Search product name..." oninput="render()" style="width:100%; padding:12px; margin-bottom:20px; border:2px solid #000; font-family:inherit;">
+    <div style="margin-bottom:24px;">
+        <input type="text" id="search" placeholder="Search by Product Name..." oninput="render()" 
+        style="width:100%; padding:16px; border-radius:12px; border:1px solid var(--border); font-size:0.9rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+    </div>
     <div id="history-table"></div>
 </div>
 
 <div id="modal">
-  <h2 id="modal-title" style="font-weight:800; text-transform:uppercase;">New Entry</h2>
-  <div class="form-grid" id="fields"></div>
-  <div id="trial-extras" class="hidden">
-      <h4 style="margin-top:20px; font-size:0.6rem; text-transform:uppercase;">Ink Effects / Digital Graphic</h4>
-      <div class="check-group">
-          <label><input type="checkbox" id="chk-Digital_White_1"> 1 Digital White</label>
-          <label><input type="checkbox" id="chk-Digital_White_2"> 2 Digital White</label>
-          <label><input type="checkbox" id="chk-Glu"> Glu</label>
-          <label><input type="checkbox" id="chk-Gloss"> Gloss</label>
-      </div>
-  </div>
-  <div style="margin-top:30px; display:flex; gap:10px;">
-    <button class="btn btn-green" onclick="submitEntry()">Save & Sync to Cloud</button>
-    <button class="btn" onclick="closeModal()">Cancel</button>
+  <div class="modal-content">
+    <h2 id="modal-title" style="margin-top:0; font-weight:800; text-transform:uppercase; letter-spacing:-0.02em;">New Entry</h2>
+    <div class="form-grid" id="fields"></div>
+    <div id="trial-extras" class="hidden">
+        <h4 style="margin-top:24px; font-size:0.65rem; text-transform:uppercase; color: var(--text-sub);">Ink Effects / Digital Graphic</h4>
+        <div class="check-group" style="border:none; padding-top:0;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.7rem; font-weight:600;"><input type="checkbox" id="chk-Digital_White_1"> 1 Digital White</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.7rem; font-weight:600;"><input type="checkbox" id="chk-Digital_White_2"> 2 Digital White</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.7rem; font-weight:600;"><input type="checkbox" id="chk-Glu"> Glu</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.7rem; font-weight:600;"><input type="checkbox" id="chk-Gloss"> Gloss</label>
+        </div>
+    </div>
+    <div style="margin-top:40px; display:flex; gap:12px; justify-content: flex-end;">
+      <button class="btn" style="background:#f3f4f6; color:#000; margin:0;" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-green" style="margin:0; padding-left:30px; padding-right:30px;" onclick="submitEntry()">Save to Cloud</button>
+    </div>
   </div>
 </div>
 
 <script>
-  // UPDATE THIS URL WITH YOUR NEW DEPLOYMENT URL
   const API_URL = "https://script.google.com/macros/s/AKfycbzv2NLG2w_nfLrgwiLBhu38q13cv5R_SE_L8SEHTEwOuspL3XumQjDES1WdcsnUTSZ5/exec";
   const COLS = ["Date", "Production_Line", "Product_Name", "Size", "Surface", "Body_Code", "Engobe_Name", "Engobe_Grammage", "Glaze_Name", "Glaze_Grammage", "Kiln_Temp", "Kiln_Min", "Status"];
   
   let state = { view: 'live', history: [], trials: [] };
 
   function loadData() {
-    document.getElementById('sync-status').innerText = "SYNCING...";
+    document.getElementById('status-text').innerText = "SYNCING";
     const script = document.createElement('script');
     script.src = `${API_URL}?callback=handleResponse&t=${Date.now()}`;
     document.body.appendChild(script);
@@ -83,7 +262,7 @@
   window.handleResponse = function(data) {
     state.history = data.history || [];
     state.trials = data.trials || [];
-    document.getElementById('sync-status').innerText = "CONNECTED";
+    document.getElementById('status-text').innerText = "CONNECTED";
     render();
   };
 
@@ -106,12 +285,12 @@
     if (state.view === 'history') {
         const search = document.getElementById('search').value.toLowerCase();
         const histItems = state.history.filter(i => String(i.Status).trim().toLowerCase() === "produced" && String(i.Product_Name).toLowerCase().includes(search));
-        let html = '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;"><thead><tr style="background:#eee;">';
-        COLS.forEach(c => html += `<th style="padding:10px; border:1px solid #ddd;">${c}</th>`);
+        let html = '<table><thead><tr>';
+        COLS.forEach(c => html += `<th>${c.replace('_',' ')}</th>`);
         html += '</tr></thead><tbody>';
         histItems.forEach(row => {
             html += '<tr>';
-            COLS.forEach(c => html += `<td style="padding:10px; border:1px solid #ddd;">${row[c] || ''}</td>`);
+            COLS.forEach(c => html += `<td>${row[c] || ''}</td>`);
             html += '</tr>';
         });
         document.getElementById('history-table').innerHTML = html + '</tbody></table>';
@@ -122,12 +301,30 @@
     const t = state.trials.find(x => x.Product_Name === i.Product_Name) || {};
     return `
       <div class="card">
-        <div class="card-head">LINE ${i.Production_Line} <span>${i.Date}</span></div>
-        <div class="row"><span class="lbl">Product Name</span><span class="main-val">${i.Product_Name}<span class="sub-val">${i.Size}</span></span></div>
-        <div class="row"><span class="lbl">Body Code & Surface</span><span class="main-val">${i.Body_Code}<span class="sub-val">${i.Surface}</span></span></div>
-        <div class="row"><span class="lbl">Engobe</span><span class="main-val">${i.Engobe_Name}<span class="sub-val">${i.Engobe_Grammage}</span></span></div>
-        <div class="row"><span class="lbl">Protection Glaze</span><span class="main-val">${i.Glaze_Name}<span class="sub-val">${i.Glaze_Grammage}</span></span></div>
-        <div class="row"><span class="lbl">Kiln Parameters</span><span class="main-val">${i.Kiln_Temp}°C <span class="sub-val">(${i.Kiln_Min} min)</span></span></div>
+        <div class="card-head">
+          <div class="line-badge">${i.Production_Line}</div>
+          <div class="date-val">${i.Date}</div>
+        </div>
+        <div class="row">
+          <span class="lbl">Product & Size</span>
+          <span class="main-val">${i.Product_Name} <span class="sub-val">${i.Size}</span></span>
+        </div>
+        <div class="row">
+          <span class="lbl">Body Code & Surface</span>
+          <span class="main-val">${i.Body_Code} <span class="sub-val">${i.Surface}</span></span>
+        </div>
+        <div class="row">
+          <span class="lbl">Engobe Specification</span>
+          <span class="main-val">${i.Engobe_Name} <span class="sub-val">${i.Engobe_Grammage}</span></span>
+        </div>
+        <div class="row">
+          <span class="lbl">Protection Glaze</span>
+          <span class="main-val">${i.Glaze_Name} <span class="sub-val">${i.Glaze_Grammage}</span></span>
+        </div>
+        <div class="row">
+          <span class="lbl">Kiln Parameters</span>
+          <span class="main-val">${i.Kiln_Temp}°C <span class="sub-val">${i.Kiln_Min} min</span></span>
+        </div>
         
         ${mode === 'trial' ? `
           <div class="check-group">
@@ -137,24 +334,26 @@
             <div class="check-item ${String(t.Gloss).toUpperCase() === "TRUE" ? 'active' : ''}">GLOSS</div>
           </div>` : ''}
 
-        <button class="btn ${mode === 'live' ? 'btn-blue' : 'btn-green'}" onclick="updateStatus('${i.Product_Name}', '${mode === 'live' ? 'Produced' : 'In Production'}')">
-          ${mode === 'live' ? 'Finish Production' : 'Move to Live'}
+        <button class="btn ${mode === 'live' ? 'btn-blue' : 'btn-green'}" onclick="updateStatus('${encodeURIComponent(i.Product_Name)}', '${mode === 'live' ? 'Produced' : 'In Production'}')">
+          ${mode === 'live' ? 'Archive Production' : 'Promote to Live'}
         </button>
       </div>`;
   }
 
   function renderAddCard(s) {
-    return `<div class="card" style="border-style:dashed; justify-content:center; align-items:center; opacity:0.5; cursor:pointer;" onclick="openModal('${s}')">
-              <span style="font-size:2rem;">+</span><span style="font-weight:800;">ADD ${s.toUpperCase()}</span>
+    return `<div class="card empty-card" onclick="openModal('${s}')">
+              <div style="font-size:2rem; margin-bottom:8px;">+</div>
+              <div style="font-weight:700; font-size:0.75rem; letter-spacing:0.05em;">NEW ${s.toUpperCase()}</div>
             </div>`;
   }
 
   function openModal(s) {
     state.curStatus = s;
-    document.getElementById('modal').style.display = 'block';
+    document.getElementById('modal').style.display = 'flex';
+    document.getElementById('modal-title').innerText = `Add ${s}`;
     document.getElementById('fields').innerHTML = COLS.map(c => {
         if (c === "Status") return `<input type="hidden" id="inp-Status" value="${s}">`;
-        return `<div><label class="lbl">${c}</label><input type="text" id="inp-${c}" style="width:100%; padding:8px; border:1px solid #000;"></div>`;
+        return `<div><label class="lbl">${c.replace('_',' ')}</label><input type="text" id="inp-${c}"></div>`;
     }).join('');
     if (s.toLowerCase() === "trial") document.getElementById('trial-extras').classList.remove('hidden');
     else document.getElementById('trial-extras').classList.add('hidden');
@@ -162,7 +361,10 @@
 
   function submitEntry() {
     let p = { method: "SAVE" };
-    COLS.forEach(c => p[c] = document.getElementById(`inp-${c}`).value);
+    COLS.forEach(c => {
+        const el = document.getElementById(`inp-${c}`);
+        if(el) p[c] = el.value;
+    });
     if (state.curStatus.toLowerCase() === "trial") {
         ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => {
             p[id] = document.getElementById(`chk-${id}`).checked ? "TRUE" : "FALSE";
@@ -174,7 +376,7 @@
   }
 
   function updateStatus(name, s) {
-    fetch(`${API_URL}?method=UPDATE_STATUS&Product_Name=${encodeURIComponent(name)}&NewStatus=${s}`, { mode: 'no-cors' }).then(() => {
+    fetch(`${API_URL}?method=UPDATE_STATUS&Product_Name=${name}&NewStatus=${s}`, { mode: 'no-cors' }).then(() => {
         setTimeout(() => { loadData(); }, 1200);
     });
   }
