@@ -14,34 +14,28 @@
     .view { padding: 40px; }
     .hidden { display: none; }
     
-    /* Layout */
     .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
     .status-card { border: 2px solid var(--border); padding: 20px; background: #fff; display: flex; flex-direction: column; min-height: 250px; }
-    .status-card.empty-card { border: 2px dashed #ccc; align-items: center; justify-content: center; cursor: pointer; color: #999; }
+    .status-card.empty-card { border: 2px dashed #ccc; align-items: center; justify-content: center; cursor: pointer; color: #999; font-weight: 800; }
     
-    /* Card Details */
     .card-id { font-weight: 800; font-size: 0.65rem; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; }
     .data-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
     .lbl { font-size: 0.55rem; color: #666; font-weight: 700; text-transform: uppercase; }
-    .val { font-size: 0.8rem; font-weight: 700; }
+    .val { font-size: 0.8rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* Digital Type Buttons (Point 5) */
     .tag-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
     .tag { font-size: 0.5rem; font-weight: 800; padding: 4px 8px; border: 1px solid #000; opacity: 0.2; text-transform: uppercase; }
     .tag.active { opacity: 1; background: #000; color: #fff; }
 
-    /* Search & Controls */
     .controls { display: flex; gap: 10px; margin-bottom: 20px; }
     .search-bar { flex: 1; padding: 10px; border: 2px solid #000; font-family: inherit; font-weight: 600; }
     .btn { background: #000; color: #fff; border: none; padding: 10px 20px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; cursor: pointer; }
     .btn-green { background: var(--green); }
-    .btn-red { background: var(--red); }
 
     #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 1000; display: none; flex-direction: column; padding: 60px; box-sizing: border-box; overflow-y: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.65rem; }
     th { background: #eee; text-align: left; padding: 10px; border: 1px solid #ddd; cursor: pointer; position: sticky; top: 0; }
     td { padding: 10px; border: 1px solid #ddd; }
-    tr:hover { background: #f1f1f1; }
     .sync-indicator { font-size: 0.6rem; font-weight: 800; color: var(--green); margin-bottom: 10px; display: block; }
   </style>
 </head>
@@ -54,7 +48,7 @@
 </nav>
 
 <div id="view-live" class="view">
-  <span id="sync-status" class="sync-indicator">READY</span>
+  <span id="sync-status" class="sync-indicator">INITIALIZING...</span>
   <div class="grid-container" id="live-container"></div>
 </div>
 
@@ -90,7 +84,7 @@
   let state = {
     view: 'live',
     live: [{ active: false, line: '1' }, { active: false, line: '2' }, { active: false, line: '3' }],
-    trials: [],
+    trials: [], // This will hold all trials found in history
     history: [],
     sortKey: 'Date',
     sortAsc: false
@@ -105,7 +99,6 @@
     render();
   }
 
-  // Load cloud data using a non-blocking script injection
   function loadCloudData() {
     document.getElementById('sync-status').innerText = "SYNCING CLOUD...";
     const script = document.createElement('script');
@@ -115,12 +108,14 @@
 
   window.handleResponse = function(data) {
     state.history = data;
+    // Update Live Lines
     const lines = ['Line 1', 'Line 2', 'Line 3'];
     lines.forEach((ln, idx) => {
-        const match = data.filter(r => r.Production_Line === ln).sort((a,b) => b.Date.localeCompare(a.Date))[0];
+        const match = data.filter(r => String(r.Production_Line).trim() === ln).sort((a,b) => b.Date.localeCompare(a.Date))[0];
         state.live[idx] = match ? { ...match, active: true, line: (idx+1).toString() } : { active: false, line: (idx+1).toString() };
     });
-    state.trials = data.filter(r => r.Production_Line === "Trial");
+    // Update Trial List from History
+    state.trials = data.filter(r => String(r.Production_Line).toLowerCase().trim() === "trial");
     document.getElementById('sync-status').innerText = "CLOUD SYNCED";
     render();
   };
@@ -138,28 +133,26 @@
           <div class="card-id">LINE ${l.line} <span style="color:var(--green)">● ACTIVE</span></div>
           <div class="data-row"><div><span class="lbl">Product</span><span class="val">${l.Product_Name}</span></div><div><span class="lbl">Surface</span><span class="val">${l.Surface}</span></div></div>
           <div class="data-row"><div><span class="lbl">Body</span><span class="val">${l.Body_Code}</span></div><div><span class="lbl">Kiln</span><span class="val">${l.Kiln_Temp}°C / ${l.Kiln_Min}m</span></div></div>
-          <div class="data-row"><div><span class="lbl">Engobe</span><span class="val">${l.Engobe_Name}</span></div><div><span class="lbl">Glaze</span><span class="val">${l.Glaze_Name}</span></div></div>
           <div style="margin-top:auto; display:flex; gap:10px;"><button class="btn" onclick="openEditor('live', ${i})">Update</button><button class="btn btn-green" onclick="archiveLive(${i})">Archive</button></div>
       </div>`;
     }).join('');
   }
 
   function renderTrials() {
-    document.getElementById('trial-container').innerHTML = state.trials.map((t, i) => {
-      const types = ["1 Digital White", "2 Digital White", "Glu", "Gloss"];
-      return `<div class="status-card" style="border-style:dashed;">
-        <div class="card-id">TRIAL ARCHIVE <span>${t.Date}</span></div>
-        <div class="data-row"><div><span class="lbl">Product</span><span class="val">${t.Product_Name}</span></div><div><span class="lbl">Body</span><span class="val">${t.Body_Code}</span></div></div>
-        <div class="tag-container">${types.map(type => `<div class="tag ${t.Digital_Type === type ? 'active' : ''}">${type}</div>`).join('')}</div>
+    const digitalTypes = ["1 Digital White", "2 Digital White", "Glu", "Gloss"];
+    document.getElementById('trial-container').innerHTML = state.trials.map((t, i) => `
+      <div class="status-card" style="border-style:dashed;">
+        <div class="card-id">TRIAL ARCHIVE <span>${t.Date || ''}</span></div>
+        <div class="data-row"><div><span class="lbl">Product</span><span class="val">${t.Product_Name || '---'}</span></div><div><span class="lbl">Body</span><span class="val">${t.Body_Code || '---'}</span></div></div>
+        <div class="tag-container">${digitalTypes.map(type => `<div class="tag ${t.Digital_Type === type ? 'active' : ''}">${type}</div>`).join('')}</div>
         <div style="margin-top:auto; display:flex; gap:10px;"><button class="btn" onclick="openEditor('trials', ${i})">Edit</button></div>
-      </div>`;
-    }).join('') + `<div class="status-card empty-card" onclick="openEditor('trials', -1)">+ NEW TRIAL</div>`;
+      </div>`).join('') + `<div class="status-card empty-card" onclick="openEditor('trials', -1)">+ NEW TRIAL</div>`;
   }
 
   function renderHistory() {
     const tableDiv = document.getElementById('history-table');
     const search = document.getElementById('search-input').value.toLowerCase();
-    let filtered = state.history.filter(r => r.Product_Name.toLowerCase().includes(search));
+    let filtered = state.history.filter(r => String(r.Product_Name).toLowerCase().includes(search));
     
     filtered.sort((a, b) => {
         let v1 = a[state.sortKey] || '', v2 = b[state.sortKey] || '';
@@ -174,13 +167,13 @@
   function openEditor(type, index) {
     state.editingType = type; state.editingIndex = index;
     const item = (index === -1) ? {} : (type === 'live' ? state.live[index] : state.trials[index]);
-    document.getElementById('modal-title').innerText = index === -1 ? 'New Entry' : 'Edit Entry';
+    document.getElementById('modal-title').innerText = index === -1 ? 'New Trial Entry' : 'Edit Entry';
     
     let html = '';
     CSV_COLUMNS.forEach(col => {
         if (type === 'live' && col === 'Production_Line') return;
         if (col === "Digital_Type") {
-          html += `<div><label class="lbl">Digital Config</label><select id="inp-${col}" style="width:100%; padding:8px; border:1px solid #000;">
+          html += `<div><label class="lbl">Digital Config</label><select id="inp-${col}" style="width:100%; padding:8px; border:2px solid #000;">
             <option value="">None</option><option value="1 Digital White" ${item[col]==='1 Digital White'?'selected':''}>1 Digital White</option>
             <option value="2 Digital White" ${item[col]==='2 Digital White'?'selected':''}>2 Digital White</option>
             <option value="Glu" ${item[col]==='Glu'?'selected':''}>Glu</option><option value="Gloss" ${item[col]==='Gloss'?'selected':''}>Gloss</option>
@@ -196,26 +189,43 @@
   function saveEntry() {
     let entry = {};
     CSV_COLUMNS.forEach(col => { entry[col] = document.getElementById(`inp-${col}`)?.value || ""; });
-    entry.Production_Line = state.editingType === 'live' ? 'Line ' + (state.editingIndex + 1) : 'Trial';
+    
+    // Crucial: Set the line to "Trial" if we are in the trial view
+    if (state.editingType === 'trials') {
+        entry.Production_Line = "Trial";
+        // If it's a new trial, add it to our local state so it appears instantly
+        if (state.editingIndex === -1) {
+            state.trials.push(entry);
+        } else {
+            state.trials[state.editingIndex] = entry;
+        }
+    } else {
+        entry.Production_Line = 'Line ' + (state.editingIndex + 1);
+    }
+    
     if (!entry.Date) entry.Date = new Date().toLocaleDateString('tr-TR');
     
     pushToCloud(entry);
     closeModal();
-    setTimeout(loadCloudData, 1000);
+    render(); // Immediate UI update
+    setTimeout(loadCloudData, 2000); // Re-sync with cloud after 2 seconds
   }
 
   function pushToCloud(entry) {
     const params = new URLSearchParams(entry).toString();
     const img = new Image(); 
     img.src = `${API_URL}?${params}&method=POST`;
-    document.getElementById('sync-status').innerText = "SYNCING TO CLOUD...";
+    document.getElementById('sync-status').innerText = "DATA SENT - SYNCING...";
   }
 
   function archiveLive(index) {
     const entry = { ...state.live[index] };
     delete entry.active; delete entry.line;
+    if (!entry.Date) entry.Date = new Date().toLocaleDateString('tr-TR');
     pushToCloud(entry);
-    setTimeout(loadCloudData, 1000);
+    state.live[index] = { active: false, line: (index + 1).toString() };
+    render();
+    setTimeout(loadCloudData, 2000);
   }
 
   function setSort(key) { state.sortKey = key; state.sortAsc = !state.sortAsc; renderHistory(); }
@@ -229,7 +239,6 @@
     link.click();
   }
 
-  // Draw UI immediately so tabs work, then load data
   render();
   loadCloudData();
 </script>
