@@ -7,45 +7,41 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root { --bg: #ffffff; --border: #000000; --green: #10b981; --red: #ef4444; --gray: #f3f4f6; }
-    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: #000; overflow-x: hidden; }
-    
+    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: #000; }
     nav { background: #000; color: #fff; display: flex; padding: 0 40px; gap: 30px; position: sticky; top: 0; z-index: 100; }
     nav div { padding: 20px 0; cursor: pointer; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; border-bottom: 3px solid transparent; opacity: 0.6; }
     nav div.active { border-color: #fff; opacity: 1; }
-
     .view { padding: 40px; }
     .hidden { display: none; }
-
-    /* Cards UI */
-    .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
-    .status-card { border: 2px solid var(--border); padding: 20px; background: #fff; display: flex; flex-direction: column; }
-    .status-card.empty-card { border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; min-height: 200px; cursor: pointer; color: #999; }
     
-    .card-id { font-weight: 800; font-size: 0.6rem; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; }
+    /* Layout */
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+    .status-card { border: 2px solid var(--border); padding: 20px; background: #fff; display: flex; flex-direction: column; min-height: 250px; }
+    .status-card.empty-card { border: 2px dashed #ccc; align-items: center; justify-content: center; cursor: pointer; color: #999; }
+    
+    /* Card Details */
+    .card-id { font-weight: 800; font-size: 0.65rem; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; }
     .data-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
     .lbl { font-size: 0.55rem; color: #666; font-weight: 700; text-transform: uppercase; }
-    .val { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .val { font-size: 0.8rem; font-weight: 700; }
 
-    /* Trial Digital Buttons */
-    .digital-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-    .tag { font-size: 0.5rem; font-weight: 800; padding: 4px 8px; border: 1px solid #000; opacity: 0.3; text-transform: uppercase; }
+    /* Digital Type Buttons (Point 5) */
+    .tag-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .tag { font-size: 0.5rem; font-weight: 800; padding: 4px 8px; border: 1px solid #000; opacity: 0.2; text-transform: uppercase; }
     .tag.active { opacity: 1; background: #000; color: #fff; }
 
-    /* History Controls */
+    /* Search & Controls */
     .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-    .search-input { flex: 1; padding: 10px; border: 2px solid #000; font-family: inherit; font-weight: 600; }
-    
+    .search-bar { flex: 1; padding: 10px; border: 2px solid #000; font-family: inherit; font-weight: 600; }
     .btn { background: #000; color: #fff; border: none; padding: 10px 20px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; cursor: pointer; }
     .btn-green { background: var(--green); }
     .btn-red { background: var(--red); }
-    
+
     #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 1000; display: none; flex-direction: column; padding: 60px; box-sizing: border-box; overflow-y: auto; }
-    
     table { width: 100%; border-collapse: collapse; font-size: 0.65rem; }
-    th { background: #eee; text-align: left; padding: 8px; border: 1px solid #ddd; cursor: pointer; position: sticky; top: 0; white-space: nowrap; }
-    th:hover { background: #ddd; }
-    td { padding: 8px; border: 1px solid #ddd; }
-    tr:nth-child(even) { background: #f9f9f9; }
+    th { background: #eee; text-align: left; padding: 10px; border: 1px solid #ddd; cursor: pointer; position: sticky; top: 0; }
+    td { padding: 10px; border: 1px solid #ddd; }
+    tr:hover { background: #f1f1f1; }
     .sync-indicator { font-size: 0.6rem; font-weight: 800; color: var(--green); margin-bottom: 10px; display: block; }
   </style>
 </head>
@@ -68,11 +64,11 @@
 
 <div id="view-history" class="view hidden">
     <div class="controls">
-        <input type="text" id="search-bar" class="search-input" placeholder="Search Product Name..." oninput="renderHistory()">
+        <input type="text" id="search-input" class="search-bar" placeholder="Search product name..." oninput="renderHistory()">
         <button class="btn" onclick="exportMaster()">Export CSV</button>
         <button class="btn btn-green" onclick="loadCloudData()">Refresh</button>
     </div>
-    <div id="history-table" style="overflow-x:auto; max-height: 70vh;"></div>
+    <div id="history-table" style="overflow-x:auto; max-height:70vh;"></div>
 </div>
 
 <div id="modal">
@@ -88,10 +84,8 @@
 
 <script>
   const API_URL = "https://script.google.com/macros/s/AKfycbyUylSn0XWy6iTVSqrjwDmmSkXHl0EOx9wf1ovtp3TLvlj5KeFgziGr92H3CQ1PrEi-/exec";
-  
-  // Cleaned columns list (Removed Body_Full)
   const CSV_COLUMNS = ["Date", "Production_Line", "Product_Name", "Surface", "Body_Code", "Engobe_Name", "Engobe_Density", "Engobe_Grammage", "Glaze_Name", "Glaze_Density", "Glaze_Grammage", "Kiln_Min", "Kiln_Temp", "Drying_Duration", "Drying_Temp", "Source_File", "Digital_Type"];
-  const fieldMap = {"Date": "Date", "Production_Line": "Line", "Product_Name": "Product", "Surface": "Surface", "Body_Code": "Body Code", "Engobe_Name": "Engobe", "Engobe_Density": "Eng. Dens", "Engobe_Grammage": "Eng. Gram", "Glaze_Name": "Glaze", "Glaze_Density": "Glz. Dens", "Glaze_Grammage": "Glz. Gram", "Kiln_Min": "Kiln Min", "Kiln_Temp": "Kiln Temp", "Drying_Duration": "Dry Dur", "Drying_Temp": "Dry Temp", "Source_File": "Source", "Digital_Type": "Digital Type"};
+  const fieldMap = {"Date": "Date", "Production_Line": "Line", "Product_Name": "Product", "Surface": "Surface", "Body_Code": "Body", "Engobe_Name": "Engobe", "Engobe_Density": "Eng. Dens", "Engobe_Grammage": "Eng. Gram", "Glaze_Name": "Glaze", "Glaze_Density": "Glz. Dens", "Glaze_Grammage": "Glz. Gram", "Kiln_Min": "Kiln Min", "Kiln_Temp": "Kiln Temp", "Drying_Duration": "Dry Dur", "Drying_Temp": "Dry Temp", "Source_File": "Source", "Digital_Type": "Digital Type"};
 
   let state = {
     view: 'live',
@@ -99,12 +93,9 @@
     trials: [],
     history: [],
     sortKey: 'Date',
-    sortAsc: false,
-    editingType: '', 
-    editingIndex: -1
+    sortAsc: false
   };
 
-  // Logic to prevent freezing: Initialize first, then fetch
   function setView(v) {
     state.view = v;
     document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
@@ -114,10 +105,11 @@
     render();
   }
 
+  // Load cloud data using a non-blocking script injection
   function loadCloudData() {
     document.getElementById('sync-status').innerText = "SYNCING CLOUD...";
     const script = document.createElement('script');
-    script.src = `${API_URL}?callback=handleResponse&ts=${Date.now()}`;
+    script.src = `${API_URL}?callback=handleResponse&t=${Date.now()}`;
     document.body.appendChild(script);
   }
 
@@ -126,12 +118,10 @@
     const lines = ['Line 1', 'Line 2', 'Line 3'];
     lines.forEach((ln, idx) => {
         const match = data.filter(r => r.Production_Line === ln).sort((a,b) => b.Date.localeCompare(a.Date))[0];
-        if (match) state.live[idx] = { ...match, active: true, line: (idx+1).toString() };
-        else state.live[idx] = { active: false, line: (idx+1).toString() };
+        state.live[idx] = match ? { ...match, active: true, line: (idx+1).toString() } : { active: false, line: (idx+1).toString() };
     });
-    // Filter trials from history
     state.trials = data.filter(r => r.Production_Line === "Trial");
-    document.getElementById('sync-status').innerText = "CLOUD CONNECTED";
+    document.getElementById('sync-status').innerText = "CLOUD SYNCED";
     render();
   };
 
@@ -143,29 +133,13 @@
 
   function renderLive() {
     document.getElementById('live-container').innerHTML = state.live.map((l, i) => {
-      if (!l.active) return `<div class="status-card empty-card" onclick="openEditor('live', ${i})"><div style="text-align:center;">+ LINE ${l.line} EMPTY</div></div>`;
+      if (!l.active) return `<div class="status-card empty-card" onclick="openEditor('live', ${i})">+ LINE ${l.line} EMPTY</div>`;
       return `<div class="status-card">
           <div class="card-id">LINE ${l.line} <span style="color:var(--green)">● ACTIVE</span></div>
-          <div class="data-row">
-            <div><span class="lbl">Product</span><span class="val">${l.Product_Name}</span></div>
-            <div><span class="lbl">Surface</span><span class="val">${l.Surface}</span></div>
-          </div>
-          <div class="data-row">
-            <div><span class="lbl">Kiln Temp</span><span class="val">${l.Kiln_Temp}°C</span></div>
-            <div><span class="lbl">Kiln Min</span><span class="val">${l.Kiln_Min}m</span></div>
-          </div>
-          <div class="data-row">
-            <div><span class="lbl">Engobe</span><span class="val">${l.Engobe_Name}</span></div>
-            <div><span class="lbl">Eng. Dens</span><span class="val">${l.Engobe_Density}</span></div>
-          </div>
-          <div class="data-row">
-            <div><span class="lbl">Glaze</span><span class="val">${l.Glaze_Name}</span></div>
-            <div><span class="lbl">Glz. Dens</span><span class="val">${l.Glaze_Density}</span></div>
-          </div>
-          <div style="margin-top:auto; padding-top:15px; display:flex; gap:10px;">
-            <button class="btn" onclick="openEditor('live', ${i})">Update</button>
-            <button class="btn btn-green" onclick="archiveLive(${i})">Archive</button>
-          </div>
+          <div class="data-row"><div><span class="lbl">Product</span><span class="val">${l.Product_Name}</span></div><div><span class="lbl">Surface</span><span class="val">${l.Surface}</span></div></div>
+          <div class="data-row"><div><span class="lbl">Body</span><span class="val">${l.Body_Code}</span></div><div><span class="lbl">Kiln</span><span class="val">${l.Kiln_Temp}°C / ${l.Kiln_Min}m</span></div></div>
+          <div class="data-row"><div><span class="lbl">Engobe</span><span class="val">${l.Engobe_Name}</span></div><div><span class="lbl">Glaze</span><span class="val">${l.Glaze_Name}</span></div></div>
+          <div style="margin-top:auto; display:flex; gap:10px;"><button class="btn" onclick="openEditor('live', ${i})">Update</button><button class="btn btn-green" onclick="archiveLive(${i})">Archive</button></div>
       </div>`;
     }).join('');
   }
@@ -174,27 +148,18 @@
     document.getElementById('trial-container').innerHTML = state.trials.map((t, i) => {
       const types = ["1 Digital White", "2 Digital White", "Glu", "Gloss"];
       return `<div class="status-card" style="border-style:dashed;">
-        <div class="card-id">TRIAL ARCHIVE <span style="opacity:0.5">${t.Date}</span></div>
-        <div class="data-row">
-            <div><span class="lbl">Product</span><span class="val">${t.Product_Name}</span></div>
-            <div><span class="lbl">Body Code</span><span class="val">${t.Body_Code}</span></div>
-        </div>
-        <div class="digital-tags">
-            ${types.map(type => `<div class="tag ${t.Digital_Type === type ? 'active' : ''}">${type}</div>`).join('')}
-        </div>
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button class="btn" onclick="openEditor('trials', ${i})">Edit</button>
-            <button class="btn btn-red" onclick="deleteTrial(${i})">×</button>
-        </div>
+        <div class="card-id">TRIAL ARCHIVE <span>${t.Date}</span></div>
+        <div class="data-row"><div><span class="lbl">Product</span><span class="val">${t.Product_Name}</span></div><div><span class="lbl">Body</span><span class="val">${t.Body_Code}</span></div></div>
+        <div class="tag-container">${types.map(type => `<div class="tag ${t.Digital_Type === type ? 'active' : ''}">${type}</div>`).join('')}</div>
+        <div style="margin-top:auto; display:flex; gap:10px;"><button class="btn" onclick="openEditor('trials', ${i})">Edit</button></div>
       </div>`;
     }).join('') + `<div class="status-card empty-card" onclick="openEditor('trials', -1)">+ NEW TRIAL</div>`;
   }
 
   function renderHistory() {
     const tableDiv = document.getElementById('history-table');
-    const search = document.getElementById('search-bar').value.toLowerCase();
-    
-    let filtered = state.history.filter(row => row.Product_Name.toLowerCase().includes(search));
+    const search = document.getElementById('search-input').value.toLowerCase();
+    let filtered = state.history.filter(r => r.Product_Name.toLowerCase().includes(search));
     
     filtered.sort((a, b) => {
         let v1 = a[state.sortKey] || '', v2 = b[state.sortKey] || '';
@@ -206,15 +171,9 @@
     tableDiv.innerHTML = `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
   }
 
-  function setSort(key) {
-    if (state.sortKey === key) state.sortAsc = !state.sortAsc;
-    else { state.sortKey = key; state.sortAsc = false; }
-    renderHistory();
-  }
-
   function openEditor(type, index) {
     state.editingType = type; state.editingIndex = index;
-    const item = index === -1 ? {} : (type === 'live' ? state.live[index] : state.trials[index]);
+    const item = (index === -1) ? {} : (type === 'live' ? state.live[index] : state.trials[index]);
     document.getElementById('modal-title').innerText = index === -1 ? 'New Entry' : 'Edit Entry';
     
     let html = '';
@@ -222,11 +181,9 @@
         if (type === 'live' && col === 'Production_Line') return;
         if (col === "Digital_Type") {
           html += `<div><label class="lbl">Digital Config</label><select id="inp-${col}" style="width:100%; padding:8px; border:1px solid #000;">
-            <option value="">None</option>
-            <option value="1 Digital White" ${item[col]==='1 Digital White'?'selected':''}>1 Digital White</option>
+            <option value="">None</option><option value="1 Digital White" ${item[col]==='1 Digital White'?'selected':''}>1 Digital White</option>
             <option value="2 Digital White" ${item[col]==='2 Digital White'?'selected':''}>2 Digital White</option>
-            <option value="Glu" ${item[col]==='Glu'?'selected':''}>Glu</option>
-            <option value="Gloss" ${item[col]==='Gloss'?'selected':''}>Gloss</option>
+            <option value="Glu" ${item[col]==='Glu'?'selected':''}>Glu</option><option value="Gloss" ${item[col]==='Gloss'?'selected':''}>Gloss</option>
           </select></div>`;
         } else {
           html += `<div><label class="lbl">${fieldMap[col]}</label><input type="text" id="inp-${col}" value="${item[col] || ''}" style="width:100%; padding:8px; border:1px solid #000; box-sizing:border-box;"></div>`;
@@ -239,43 +196,29 @@
   function saveEntry() {
     let entry = {};
     CSV_COLUMNS.forEach(col => { entry[col] = document.getElementById(`inp-${col}`)?.value || ""; });
-    
-    if (state.editingType === 'live') {
-        entry.Production_Line = 'Line ' + (state.editingIndex + 1);
-    } else {
-        entry.Production_Line = 'Trial';
-    }
-    
+    entry.Production_Line = state.editingType === 'live' ? 'Line ' + (state.editingIndex + 1) : 'Trial';
     if (!entry.Date) entry.Date = new Date().toLocaleDateString('tr-TR');
+    
     pushToCloud(entry);
     closeModal();
-    setTimeout(loadCloudData, 1000); // Reload data after a moment
+    setTimeout(loadCloudData, 1000);
   }
 
   function pushToCloud(entry) {
     const params = new URLSearchParams(entry).toString();
     const img = new Image(); 
     img.src = `${API_URL}?${params}&method=POST`;
-    document.getElementById('sync-status').innerText = "SENDING TO CLOUD...";
+    document.getElementById('sync-status').innerText = "SYNCING TO CLOUD...";
   }
 
   function archiveLive(index) {
     const entry = { ...state.live[index] };
     delete entry.active; delete entry.line;
     pushToCloud(entry);
-    state.live[index] = { active: false, line: (index + 1).toString() };
-    render();
     setTimeout(loadCloudData, 1000);
   }
 
-  function deleteTrial(i) {
-    if(confirm("Delete this trial from cloud?")) {
-        // We handle delete as a POST with a specific instruction if your script supports it
-        // For now, let's just push a blank entry or notify.
-        alert("Delete functionality requires script logic. Entry remains in Cloud.");
-    }
-  }
-
+  function setSort(key) { state.sortKey = key; state.sortAsc = !state.sortAsc; renderHistory(); }
   function closeModal() { document.getElementById('modal').style.display = 'none'; }
   function exportMaster() {
     const csv = Papa.unparse(state.history);
@@ -286,7 +229,7 @@
     link.click();
   }
 
-  // Initial Draw
+  // Draw UI immediately so tabs work, then load data
   render();
   loadCloudData();
 </script>
