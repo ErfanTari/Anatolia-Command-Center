@@ -204,6 +204,103 @@
       display: flex; align-items: center; gap: 8px;
     }
     .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; }
+
+    /* Card Image (Task 5) */
+    .card-image {
+      width: calc(100% + 56px);
+      margin: -28px -28px 20px -28px;
+      height: 180px;
+      object-fit: cover;
+      background: #e5e7eb;
+      display: block;
+      border-radius: 12px 12px 0 0;
+    }
+
+    /* History CRUD Controls (Task 1) */
+    .history-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .btn-sm {
+      border: none;
+      padding: 10px 18px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-edit-mode { background: #f3f4f6; color: var(--text-main); }
+    .btn-edit-mode.active { background: #fbbf24; color: #000; }
+    .btn-edit-mode:hover { opacity: 0.85; }
+    .btn-add-row { background: var(--green); color: white; }
+    .btn-add-row:hover { background: #059669; }
+    .btn-cleanup { background: #fbbf24; color: #000; }
+
+    /* Sortable headers */
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { color: var(--text-main); }
+    th.sort-asc::after { content: " ▲"; font-size: 0.5rem; }
+    th.sort-desc::after { content: " ▼"; font-size: 0.5rem; }
+
+    /* Row actions on hover */
+    .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+    tr:hover .row-actions { opacity: 1; }
+    .row-action-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .row-action-btn:hover { background: #f3f4f6; color: var(--text-main); }
+    .row-action-btn.delete:hover { background: var(--red); color: white; border-color: var(--red); }
+    .row-action-btn.save:hover { background: var(--green); color: white; border-color: var(--green); }
+
+    /* Inline editing */
+    td.editing { padding: 4px; }
+    td.editing input {
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--green);
+      color: var(--text-main);
+      padding: 8px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.7rem;
+    }
+
+    /* Discard button (Task 2) */
+    .btn-red { background: var(--red); color: white; }
+    .btn-red:hover { background: #dc2626; }
+
+    /* Card button group */
+    .card-actions { display: flex; gap: 8px; margin-top: auto; }
+    .card-actions .btn { flex: 1; margin-top: 0; }
+
+    /* Modal image preview */
+    .modal-img-preview {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      background: #e5e7eb;
+      display: none;
+    }
+
+    /* Form select styling */
+    .form-grid select {
+      width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; background: #fff; color: var(--text-main);
+    }
   </style>
 </head>
 <body>
@@ -220,8 +317,13 @@
 <div id="view-trials" class="view hidden"><div class="grid" id="trial-container"></div></div>
 <div id="view-history" class="view hidden">
     <div style="margin-bottom:24px;">
-        <input type="text" id="search" placeholder="Search by Product Name..." oninput="render()" 
+        <input type="text" id="search" placeholder="Search by Product Name..." oninput="renderHistory()"
         style="width:100%; padding:16px; border-radius:12px; border:1px solid var(--border); font-size:0.9rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+    </div>
+    <div class="history-controls">
+      <button class="btn-sm btn-edit-mode" id="btn-edit-mode" onclick="toggleEditMode()">Edit Mode</button>
+      <button class="btn-sm btn-add-row hidden" id="btn-add-row" onclick="addHistoryRow()">+ Add Row</button>
+      <button class="btn-sm btn-cleanup hidden" id="btn-cleanup" onclick="triggerSheetCleanup()">Clean Names</button>
     </div>
     <div id="history-table"></div>
 </div>
@@ -229,7 +331,12 @@
 <div id="modal">
   <div class="modal-content">
     <h2 id="modal-title" style="margin-top:0; font-weight:800; text-transform:uppercase; letter-spacing:-0.02em;">New Entry</h2>
+    <img id="modal-img-preview" class="modal-img-preview" src="" alt="Product preview">
     <div class="form-grid" id="fields"></div>
+    <div style="margin-top:16px;">
+      <label class="lbl">Image URL Override (optional)</label>
+      <input type="text" id="inp-Image_URL" placeholder="Paste custom image URL..." style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; font-family:inherit;">
+    </div>
     <div id="trial-extras" class="hidden">
         <h4 style="margin-top:24px; font-size:0.65rem; text-transform:uppercase; color: var(--text-sub);">Ink Effects / Digital Graphic</h4>
         <div class="check-group" style="border:none; padding-top:0;">
@@ -249,8 +356,73 @@
 <script>
   const API_URL = "https://script.google.com/macros/s/AKfycbzv2NLG2w_nfLrgwiLBhu38q13cv5R_SE_L8SEHTEwOuspL3XumQjDES1WdcsnUTSZ5/exec";
   const COLS = ["Date", "Production_Line", "Product_Name", "Size", "Surface", "Body_Code", "Engobe_Name", "Engobe_Grammage", "Glaze_Name", "Glaze_Grammage", "Kiln_Temp", "Kiln_Min", "Status"];
-  
-  let state = { view: 'live', history: [], trials: [] };
+
+  // Task 4: Product catalog for dropdown selector
+  const PRODUCT_CATALOG = [
+    { name: "Lustra Onyx Feather", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Lustra Onyx Crema", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Lustra Onyx Sage", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    { name: "Serena Crater", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    { name: "Serena Valley", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    { name: "Lithoform Crosscut Twilight", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    { name: "Lithoform Crosscut Vista", sizes: ["600x1200"], surfaces: ["Matte"] },
+    { name: "Atlantic Ocean", sizes: ["600x1200"], surfaces: ["Polished"] },
+    { name: "Majesto Atlantic Ocean", sizes: ["600x1200"], surfaces: ["Polished"] },
+    { name: "Taj Mahal", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Calacatta Borghini", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Oro", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Pietra Imperiale", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Nero Marquina", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    { name: "Sahara Noir", sizes: ["1200x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Statuario Block 16", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Statuario Block 17", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Super White", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    { name: "Cristallo", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Travertino Classico", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+  ];
+  const LINES = ["Line 1", "Line 2", "Line 3"];
+  const BODIES = ["LC BODY", "LW BODY", "R6 BODY", "R7 BODY", "D 11 C BODY"];
+
+  // Task 3: Product Name Cleanup
+  const NAME_CLEANUP_TAGS = [/\bfull\b/gi, /\bxxsl\b/gi, /\b20mm\b/gi, /\bantislip\b/gi, /\borganic\b/gi];
+  function cleanProductName(name) {
+    if (!name) return name;
+    let cleaned = name;
+    NAME_CLEANUP_TAGS.forEach(tag => { cleaned = cleaned.replace(tag, ''); });
+    return cleaned.replace(/\s{2,}/g, ' ').trim();
+  }
+  function cleanAllProductNames(data) {
+    if (!Array.isArray(data)) return data;
+    return data.map(row => {
+      if (row.Product_Name) row.Product_Name = cleanProductName(row.Product_Name);
+      return row;
+    });
+  }
+  function triggerSheetCleanup() {
+    if (!confirm('This will permanently clean all product names in Google Sheets (removing Full, xxsl, 20mm, antislip, organic). Proceed?')) return;
+    fetch(`${API_URL}?method=CLEANUP_NAMES`, { mode: 'no-cors' })
+      .then(() => { alert('Cleanup request sent. Reloading...'); setTimeout(loadData, 2000); });
+  }
+
+  // Task 5: Image System
+  const IMG_BASE_URL = "https://raw.githubusercontent.com/ErfanTari/Anatolia-Command-Center/Product_Pictures/";
+  function getProductImage(productName, imageUrlOverride) {
+    if (imageUrlOverride && imageUrlOverride.trim()) return imageUrlOverride.trim();
+    if (!productName) return getPlaceholderImage('Unknown');
+    const filename = cleanProductName(productName).toLowerCase().replace(/\s+/g, '-') + '.webp';
+    return IMG_BASE_URL + filename;
+  }
+  function getPlaceholderImage(name) {
+    return `https://placehold.co/600x360/e5e7eb/6b7280?text=${encodeURIComponent(name)}&font=roboto`;
+  }
+  function onImgError(img) {
+    const name = img.alt || 'Product';
+    img.onerror = null;
+    img.src = getPlaceholderImage(name);
+  }
+
+  // State
+  let state = { view: 'live', history: [], trials: [], editMode: false, sortCol: null, sortDir: 'asc', editingRow: null };
 
   function loadData() {
     document.getElementById('status-text').innerText = "SYNCING";
@@ -260,8 +432,8 @@
   }
 
   window.handleResponse = function(data) {
-    state.history = data.history || [];
-    state.trials = data.trials || [];
+    state.history = cleanAllProductNames(data.history || []);
+    state.trials = cleanAllProductNames(data.trials || []);
     document.getElementById('status-text').innerText = "CONNECTED";
     render();
   };
@@ -282,25 +454,15 @@
     const trials = state.history.filter(i => String(i.Status).trim().toLowerCase() === "trial");
     document.getElementById('trial-container').innerHTML = trials.map(i => renderCard(i, "trial")).join('') + renderAddCard("Trial");
 
-    if (state.view === 'history') {
-        const search = document.getElementById('search').value.toLowerCase();
-        const histItems = state.history.filter(i => String(i.Status).trim().toLowerCase() === "produced" && String(i.Product_Name).toLowerCase().includes(search));
-        let html = '<table><thead><tr>';
-        COLS.forEach(c => html += `<th>${c.replace('_',' ')}</th>`);
-        html += '</tr></thead><tbody>';
-        histItems.forEach(row => {
-            html += '<tr>';
-            COLS.forEach(c => html += `<td>${row[c] || ''}</td>`);
-            html += '</tr>';
-        });
-        document.getElementById('history-table').innerHTML = html + '</tbody></table>';
-    }
+    if (state.view === 'history') renderHistory();
   }
 
   function renderCard(i, mode) {
     const t = state.trials.find(x => x.Product_Name === i.Product_Name) || {};
+    const image = getProductImage(i.Product_Name || '', i.Image_URL);
     return `
       <div class="card">
+        <img src="${image}" class="card-image" alt="${i.Product_Name || ''}" onerror="onImgError(this)">
         <div class="card-head">
           <div class="line-badge">${i.Production_Line}</div>
           <div class="date-val">${i.Date}</div>
@@ -325,7 +487,7 @@
           <span class="lbl">Kiln Parameters</span>
           <span class="main-val">${i.Kiln_Temp}°C <span class="sub-val">${i.Kiln_Min} min</span></span>
         </div>
-        
+
         ${mode === 'trial' ? `
           <div class="check-group">
             <div class="check-item ${String(t.Digital_White_1).toUpperCase() === "TRUE" ? 'active' : ''}">DW1</div>
@@ -334,9 +496,12 @@
             <div class="check-item ${String(t.Gloss).toUpperCase() === "TRUE" ? 'active' : ''}">GLOSS</div>
           </div>` : ''}
 
-        <button class="btn ${mode === 'live' ? 'btn-blue' : 'btn-green'}" onclick="updateStatus('${encodeURIComponent(i.Product_Name)}', '${mode === 'live' ? 'Produced' : 'In Production'}')">
-          ${mode === 'live' ? 'Archive Production' : 'Promote to Live'}
-        </button>
+        <div class="card-actions">
+          <button class="btn ${mode === 'live' ? 'btn-blue' : 'btn-green'}" onclick="updateStatus('${encodeURIComponent(i.Product_Name)}', '${mode === 'live' ? 'Produced' : 'In Production'}')">
+            ${mode === 'live' ? 'Archive Production' : 'Promote to Live'}
+          </button>
+          ${mode === 'trial' ? `<button class="btn btn-red" onclick="discardTrial('${encodeURIComponent(i.Product_Name)}')">Discard</button>` : ''}
+        </div>
       </div>`;
   }
 
@@ -347,37 +512,197 @@
             </div>`;
   }
 
+  // === Task 1: History CRUD ===
+  function toggleEditMode() {
+    state.editMode = !state.editMode;
+    document.getElementById('btn-edit-mode').classList.toggle('active', state.editMode);
+    document.getElementById('btn-add-row').classList.toggle('hidden', !state.editMode);
+    document.getElementById('btn-cleanup').classList.toggle('hidden', !state.editMode);
+    state.editingRow = null;
+    renderHistory();
+  }
+
+  function sortHistory(col) {
+    if (state.sortCol === col) {
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.sortCol = col;
+      state.sortDir = 'asc';
+    }
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const search = document.getElementById('search').value.toLowerCase();
+    let histItems = state.history.filter(i =>
+      String(i.Status).trim().toLowerCase() === "produced" &&
+      String(i.Product_Name).toLowerCase().includes(search)
+    );
+    if (state.sortCol) {
+      histItems.sort((a, b) => {
+        const va = (a[state.sortCol] || '').toString().toLowerCase();
+        const vb = (b[state.sortCol] || '').toString().toLowerCase();
+        const cmp = va.localeCompare(vb, undefined, { numeric: true });
+        return state.sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    let html = '<table><thead><tr>';
+    COLS.forEach(c => {
+      const sc = state.sortCol === c ? (state.sortDir === 'asc' ? 'sort-asc' : 'sort-desc') : '';
+      html += `<th class="sortable ${sc}" onclick="sortHistory('${c}')">${c.replace(/_/g, ' ')}</th>`;
+    });
+    if (state.editMode) html += '<th>Actions</th>';
+    html += '</tr></thead><tbody>';
+
+    histItems.forEach(row => {
+      const rowIdx = state.history.indexOf(row);
+      html += `<tr data-row-idx="${rowIdx}">`;
+      COLS.forEach(c => {
+        if (state.editMode && state.editingRow === rowIdx) {
+          html += `<td class="editing"><input type="text" value="${(row[c] || '').toString().replace(/"/g, '&quot;')}" data-col="${c}"></td>`;
+        } else {
+          html += `<td>${row[c] || ''}</td>`;
+        }
+      });
+      if (state.editMode) {
+        html += '<td>';
+        if (state.editingRow === rowIdx) {
+          html += `<div class="row-actions" style="opacity:1;">
+            <button class="row-action-btn save" onclick="saveHistoryRow(${rowIdx})" title="Save">&#10003;</button>
+            <button class="row-action-btn" onclick="cancelEditRow()" title="Cancel">&#10005;</button>
+          </div>`;
+        } else {
+          html += `<div class="row-actions">
+            <button class="row-action-btn" onclick="editHistoryRow(${rowIdx})" title="Edit">&#9998;</button>
+            <button class="row-action-btn delete" onclick="deleteHistoryRow(${rowIdx})" title="Delete">&#10005;</button>
+          </div>`;
+        }
+        html += '</td>';
+      }
+      html += '</tr>';
+    });
+    document.getElementById('history-table').innerHTML = html + '</tbody></table>';
+  }
+
+  function editHistoryRow(idx) { state.editingRow = idx; renderHistory(); }
+  function cancelEditRow() { state.editingRow = null; renderHistory(); }
+
+  function saveHistoryRow(idx) {
+    const row = state.history[idx];
+    const tr = document.querySelector(`tr[data-row-idx="${idx}"]`);
+    const inputs = tr.querySelectorAll('input[data-col]');
+    const updates = {};
+    inputs.forEach(inp => { updates[inp.dataset.col] = inp.value; row[inp.dataset.col] = inp.value; });
+    const params = new URLSearchParams({ method: 'UPDATE_ROW', Original_Name: encodeURIComponent(row.Product_Name), ...updates });
+    fetch(`${API_URL}?${params.toString()}`, { mode: 'no-cors' }).then(() => { setTimeout(loadData, 1200); });
+    state.editingRow = null;
+    renderHistory();
+  }
+
+  function deleteHistoryRow(idx) {
+    const row = state.history[idx];
+    if (!confirm(`Delete "${row.Product_Name}" from history? This cannot be undone.`)) return;
+    state.history.splice(idx, 1);
+    renderHistory();
+    fetch(`${API_URL}?method=DELETE_ROW&Product_Name=${encodeURIComponent(row.Product_Name)}`, { mode: 'no-cors' })
+      .then(() => { setTimeout(loadData, 1200); });
+  }
+
+  function addHistoryRow() { openModal('Produced'); }
+
+  // === Task 2: R&D Discard ===
+  function discardTrial(encodedName) {
+    const name = decodeURIComponent(encodedName);
+    if (!confirm(`Are you sure you want to discard this trial? This action cannot be undone.\n\nProduct: ${name}`)) return;
+    state.history = state.history.filter(r => r.Product_Name !== name);
+    render();
+    fetch(`${API_URL}?method=DELETE_ROW&Product_Name=${encodeURIComponent(name)}`, { mode: 'no-cors' })
+      .then(() => { setTimeout(loadData, 1200); });
+  }
+
+  // === Task 4: Modal with hybrid dropdown ===
   function openModal(s) {
     state.curStatus = s;
     document.getElementById('modal').style.display = 'flex';
     document.getElementById('modal-title').innerText = `Add ${s}`;
-    document.getElementById('fields').innerHTML = COLS.map(c => {
-        if (c === "Status") return `<input type="hidden" id="inp-Status" value="${s}">`;
-        return `<div><label class="lbl">${c.replace('_',' ')}</label><input type="text" id="inp-${c}"></div>`;
-    }).join('');
+    document.getElementById('modal-img-preview').style.display = 'none';
+    document.getElementById('inp-Image_URL').value = '';
+
+    let html = '';
+    COLS.forEach(c => {
+      if (c === "Status") {
+        html += `<input type="hidden" id="inp-Status" value="${s}">`;
+        return;
+      }
+      html += '<div>';
+      html += `<label class="lbl">${c.replace(/_/g, ' ')}</label>`;
+
+      if (c === 'Product_Name') {
+        const opts = PRODUCT_CATALOG.map(p => `<option value="${p.name}">`).join('');
+        html += `<input type="text" id="inp-Product_Name" list="product-list" placeholder="Select or type..." oninput="onProductChange(this.value)" autocomplete="off">
+          <datalist id="product-list">${opts}</datalist>`;
+      } else if (c === 'Production_Line') {
+        html += `<select id="inp-Production_Line"><option value="">Select...</option>${LINES.map(l => `<option value="${l}">${l}</option>`).join('')}</select>`;
+      } else if (c === 'Body_Code') {
+        html += `<select id="inp-Body_Code"><option value="">Select...</option>${BODIES.map(b => `<option value="${b}">${b}</option>`).join('')}</select>`;
+      } else if (c === 'Size') {
+        html += `<select id="inp-Size"><option value="">Select product first...</option></select>`;
+      } else if (c === 'Surface') {
+        html += `<select id="inp-Surface"><option value="">Select product first...</option></select>`;
+      } else if (c === 'Date') {
+        html += `<input type="date" id="inp-Date">`;
+      } else {
+        html += `<input type="text" id="inp-${c}" placeholder="${c.replace(/_/g, ' ')}">`;
+      }
+      html += '</div>';
+    });
+
+    document.getElementById('fields').innerHTML = html;
     if (s.toLowerCase() === "trial") document.getElementById('trial-extras').classList.remove('hidden');
     else document.getElementById('trial-extras').classList.add('hidden');
   }
 
+  function onProductChange(productName) {
+    const product = PRODUCT_CATALOG.find(p => p.name === productName);
+    if (product) {
+      const sizeEl = document.getElementById('inp-Size');
+      if (sizeEl) sizeEl.innerHTML = '<option value="">Select...</option>' + product.sizes.map(s => `<option value="${s}">${s}</option>`).join('');
+      const surfEl = document.getElementById('inp-Surface');
+      if (surfEl) surfEl.innerHTML = '<option value="">Select...</option>' + product.surfaces.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+    const preview = document.getElementById('modal-img-preview');
+    if (preview && productName) {
+      const urlOverride = document.getElementById('inp-Image_URL');
+      preview.src = getProductImage(productName, urlOverride ? urlOverride.value : '');
+      preview.onerror = function() { onImgError(this); };
+      preview.alt = productName;
+      preview.style.display = 'block';
+    }
+  }
+  window.onProductChange = onProductChange;
+
   function submitEntry() {
     let p = { method: "SAVE" };
     COLS.forEach(c => {
-        const el = document.getElementById(`inp-${c}`);
-        if(el) p[c] = el.value;
+      const el = document.getElementById(`inp-${c}`);
+      if (el) p[c] = el.value;
     });
+    const imgUrl = document.getElementById('inp-Image_URL');
+    if (imgUrl && imgUrl.value.trim()) p['Image_URL'] = imgUrl.value.trim();
     if (state.curStatus.toLowerCase() === "trial") {
-        ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => {
-            p[id] = document.getElementById(`chk-${id}`).checked ? "TRUE" : "FALSE";
-        });
+      ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => {
+        p[id] = document.getElementById(`chk-${id}`).checked ? "TRUE" : "FALSE";
+      });
     }
     fetch(`${API_URL}?${new URLSearchParams(p).toString()}`, { mode: 'no-cors' }).then(() => {
-        setTimeout(() => { closeModal(); loadData(); }, 1200);
+      setTimeout(() => { closeModal(); loadData(); }, 1200);
     });
   }
 
   function updateStatus(name, s) {
     fetch(`${API_URL}?method=UPDATE_STATUS&Product_Name=${name}&NewStatus=${s}`, { mode: 'no-cors' }).then(() => {
-        setTimeout(() => { loadData(); }, 1200);
+      setTimeout(() => { loadData(); }, 1200);
     });
   }
 
