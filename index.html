@@ -751,7 +751,8 @@
       } else if (c === 'Production_Line') {
         html += `<select id="inp-Production_Line"><option value="">Select...</option>${LINES.map(l => `<option value="${l}">${l}</option>`).join('')}</select>`;
       } else if (c === 'Body_Code') {
-        html += `<select id="inp-Body_Code"><option value="">Select...</option>${BODIES.map(b => `<option value="${b}">${b}</option>`).join('')}</select>`;
+        html += `<input type="text" id="inp-Body_Code" list="body-list" placeholder="Select or type body code..." autocomplete="off">
+          <datalist id="body-list">${BODIES.map(b => `<option value="${b}">`).join('')}</datalist>`;
       } else if (c === 'Size') {
         html += `<input type="text" id="inp-Size" list="size-list" placeholder="Select or type size..." autocomplete="off">
           <datalist id="size-list"></datalist>`;
