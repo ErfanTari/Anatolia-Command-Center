@@ -172,10 +172,11 @@
     .empty-card:hover { background: #fff; border-color: var(--accent); color: var(--accent); }
 
     /* Modal & Table */
-    #modal { 
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    #modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-      z-index: 1000; display: none; padding: 40px; box-sizing: border-box; 
+      z-index: 1000; display: none; padding: 40px; box-sizing: border-box;
+      align-items: center; overflow-y: auto;
     }
     .modal-content {
       background: #fff;
@@ -184,8 +185,11 @@
       padding: 40px;
       border-radius: 16px;
       box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-grid > div { padding: 4px 0; }
     .form-grid input {
       width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
     }
@@ -206,14 +210,23 @@
     .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; }
 
     /* Card Image (Task 5) */
-    .card-image {
+    .card-image-wrap {
       width: calc(100% + 56px);
       margin: -28px -28px 20px -28px;
-      height: 180px;
-      object-fit: cover;
-      background: #e5e7eb;
-      display: block;
+      height: 240px;
+      overflow: hidden;
       border-radius: 12px 12px 0 0;
+      background: #e5e7eb;
+      position: relative;
+    }
+    .card-image {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 260%;
+      height: 260%;
+      transform: translate(-50%, -50%) rotate(90deg);
+      object-fit: cover;
     }
 
     /* History CRUD Controls (Task 1) */
@@ -287,19 +300,48 @@
     .card-actions .btn { flex: 1; margin-top: 0; }
 
     /* Modal image preview */
-    .modal-img-preview {
-      width: 100%;
-      height: 140px;
-      object-fit: cover;
-      border-radius: 10px;
-      margin-bottom: 20px;
+    .modal-img-wrap {
+      width: calc(100% + 80px);
+      margin-left: -40px;
+      margin-right: -40px;
+      margin-top: -40px;
+      height: 260px;
+      overflow: hidden;
+      border-radius: 16px 16px 0 0;
+      margin-bottom: 24px;
       background: #e5e7eb;
       display: none;
+      position: relative;
+    }
+    .modal-img-preview {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 260%;
+      height: 260%;
+      transform: translate(-50%, -50%) rotate(90deg);
+      object-fit: cover;
     }
 
     /* Form select styling */
     .form-grid select {
       width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; background: #fff; color: var(--text-main);
+    }
+
+    /* Card edit button */
+    .btn-outline {
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover {
+      background: #f3f4f6;
+      border-color: var(--text-sub);
+    }
+
+    /* Responsive form grid */
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -330,8 +372,10 @@
 
 <div id="modal">
   <div class="modal-content">
+    <div id="modal-img-wrap" class="modal-img-wrap">
+      <img id="modal-img-preview" class="modal-img-preview" src="" alt="Product preview">
+    </div>
     <h2 id="modal-title" style="margin-top:0; font-weight:800; text-transform:uppercase; letter-spacing:-0.02em;">New Entry</h2>
-    <img id="modal-img-preview" class="modal-img-preview" src="" alt="Product preview">
     <div class="form-grid" id="fields"></div>
     <div style="margin-top:16px;">
       <label class="lbl">Image URL Override (optional)</label>
@@ -359,26 +403,85 @@
 
   // Task 4: Product catalog for dropdown selector
   const PRODUCT_CATALOG = [
-    { name: "Lustra Onyx Feather", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
-    { name: "Lustra Onyx Crema", sizes: ["1200x1200"], surfaces: ["Polished"] },
-    { name: "Lustra Onyx Sage", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
-    { name: "Serena Crater", sizes: ["1200x1200"], surfaces: ["Honed"] },
-    { name: "Serena Valley", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    // — A —
+    { name: "Arabescato Corchia", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Arabescato Vagli", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Ariel Bianco", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    { name: "Armani Noir", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Atlantic Ocean", sizes: ["600x1200"], surfaces: ["Polished"] },
+    // — B —
+    { name: "Bianco Dior", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Bianco Gioia", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Bianco Stratura", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    // — C —
+    { name: "Calacatta Borghini", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Carrara", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Corchia", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Cremo", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Noir", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Oro", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Calacatta Picasso", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Calacatta Viola", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Ceppo Di Gre", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte", "Honed"] },
+    { name: "Colorado Lincoln", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Cristallo", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Crystal Bianco", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    // — F —
+    { name: "Foresta", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte", "Honed"] },
+    { name: "Forge Eleganza", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte", "Honed"] },
+    { name: "French Vanilla", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Fusion White", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    // — G —
+    { name: "Gemma Bronze", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Grigio Quarzo", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    // — L —
+    { name: "Lithoform Crosscut Coast", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Lithoform Crosscut Dunes", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
     { name: "Lithoform Crosscut Twilight", sizes: ["1200x1200"], surfaces: ["Honed"] },
     { name: "Lithoform Crosscut Vista", sizes: ["600x1200"], surfaces: ["Matte"] },
-    { name: "Atlantic Ocean", sizes: ["600x1200"], surfaces: ["Polished"] },
+    { name: "Lithoform Veincut Coast", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Lithoform Veincut Dunes", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Lithoform Veincut Vista", sizes: ["600x1200"], surfaces: ["Matte"] },
+    { name: "Lustra Onyx Crema", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Lustra Onyx Feather", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Lustra Onyx Sage", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    // — M —
+    { name: "Macchia Vecchia", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
     { name: "Majesto Atlantic Ocean", sizes: ["600x1200"], surfaces: ["Polished"] },
-    { name: "Taj Mahal", sizes: ["1200x1200"], surfaces: ["Polished"] },
-    { name: "Calacatta Borghini", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
-    { name: "Calacatta Oro", sizes: ["1200x1200"], surfaces: ["Polished"] },
-    { name: "Pietra Imperiale", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Marina White", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    { name: "Monoforma Moonlight", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    { name: "Monoforma Oasis", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    { name: "Monoforma Silhouette", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    { name: "Monoforma Storm", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    { name: "Montagna Grey", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte", "Honed"] },
+    { name: "Montagna Jade", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte", "Honed"] },
+    // — N —
     { name: "Nero Marquina", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
+    // — O —
+    { name: "Onyx Halo", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Oro Noir", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    // — P —
+    { name: "Panda", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Pietra Imperiale", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Publica Horizon", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    { name: "Publica Terrain", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    { name: "Publica Thunder", sizes: ["1200x1200", "600x1200"], surfaces: ["Matte"] },
+    // — S —
     { name: "Sahara Noir", sizes: ["1200x1200"], surfaces: ["Polished", "Honed"] },
+    { name: "Serena Crater", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    { name: "Serena Flint", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    { name: "Serena Shale", sizes: ["1200x1200"], surfaces: ["Honed"] },
+    { name: "Serena Valley", sizes: ["1200x1200"], surfaces: ["Honed"] },
     { name: "Statuario Block 16", sizes: ["1200x1200"], surfaces: ["Polished"] },
     { name: "Statuario Block 17", sizes: ["1200x1200"], surfaces: ["Polished"] },
     { name: "Super White", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished"] },
-    { name: "Cristallo", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    // — T —
+    { name: "Taj Mahal", sizes: ["1200x1200"], surfaces: ["Polished"] },
+    { name: "Terrazzo Delicato", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
     { name: "Travertino Classico", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    { name: "Travertino Titanium", sizes: ["1200x1200", "600x1200"], surfaces: ["Honed", "Matte"] },
+    // — V —
+    { name: "Verdi Alpi", sizes: ["1200x1200", "600x1200"], surfaces: ["Polished", "Honed"] },
   ];
   const LINES = ["Line 1", "Line 2", "Line 3"];
   const BODIES = ["LC BODY", "LW BODY", "R6 BODY", "R7 BODY", "D 11 C BODY"];
@@ -462,7 +565,9 @@
     const image = getProductImage(i.Product_Name || '', i.Image_URL);
     return `
       <div class="card">
-        <img src="${image}" class="card-image" alt="${i.Product_Name || ''}" onerror="onImgError(this)">
+        <div class="card-image-wrap">
+          <img src="${image}" class="card-image" alt="${i.Product_Name || ''}" onerror="onImgError(this)">
+        </div>
         <div class="card-head">
           <div class="line-badge">${i.Production_Line}</div>
           <div class="date-val">${i.Date}</div>
@@ -497,6 +602,7 @@
           </div>` : ''}
 
         <div class="card-actions">
+          <button class="btn btn-outline" onclick="openEditModal('${encodeURIComponent(JSON.stringify(i))}')">Edit</button>
           <button class="btn ${mode === 'live' ? 'btn-blue' : 'btn-green'}" onclick="updateStatus('${encodeURIComponent(i.Product_Name)}', '${mode === 'live' ? 'Produced' : 'In Production'}')">
             ${mode === 'live' ? 'Archive Production' : 'Promote to Live'}
           </button>
@@ -626,7 +732,7 @@
     state.curStatus = s;
     document.getElementById('modal').style.display = 'flex';
     document.getElementById('modal-title').innerText = `Add ${s}`;
-    document.getElementById('modal-img-preview').style.display = 'none';
+    document.getElementById('modal-img-wrap').style.display = 'none';
     document.getElementById('inp-Image_URL').value = '';
 
     let html = '';
@@ -647,9 +753,11 @@
       } else if (c === 'Body_Code') {
         html += `<select id="inp-Body_Code"><option value="">Select...</option>${BODIES.map(b => `<option value="${b}">${b}</option>`).join('')}</select>`;
       } else if (c === 'Size') {
-        html += `<select id="inp-Size"><option value="">Select product first...</option></select>`;
+        html += `<input type="text" id="inp-Size" list="size-list" placeholder="Select or type size..." autocomplete="off">
+          <datalist id="size-list"></datalist>`;
       } else if (c === 'Surface') {
-        html += `<select id="inp-Surface"><option value="">Select product first...</option></select>`;
+        html += `<input type="text" id="inp-Surface" list="surface-list" placeholder="Select or type surface..." autocomplete="off">
+          <datalist id="surface-list"></datalist>`;
       } else if (c === 'Date') {
         html += `<input type="date" id="inp-Date">`;
       } else {
@@ -663,33 +771,106 @@
     else document.getElementById('trial-extras').classList.add('hidden');
   }
 
+  function openEditModal(encodedData) {
+    const data = JSON.parse(decodeURIComponent(encodedData));
+    const status = data.Status || 'In Production';
+    openModal(status);
+    document.getElementById('modal-title').innerText = 'Edit Entry';
+    state.editingEntry = data.Product_Name;
+    state.editingOriginalImageURL = data.Image_URL || '';
+
+    // Pre-fill all form fields
+    COLS.forEach(c => {
+      const el = document.getElementById(`inp-${c}`);
+      if (el && data[c] !== undefined) {
+        el.value = data[c];
+      }
+    });
+
+    // Pre-fill Image_URL
+    const imgUrlEl = document.getElementById('inp-Image_URL');
+    if (imgUrlEl && data.Image_URL) {
+      imgUrlEl.value = data.Image_URL;
+    }
+
+    // Populate Size and Surface datalists based on selected product
+    const product = PRODUCT_CATALOG.find(p => p.name === data.Product_Name);
+    if (product) {
+      const sizeList = document.getElementById('size-list');
+      if (sizeList) sizeList.innerHTML = product.sizes.map(s => `<option value="${s}">`).join('');
+      const surfList = document.getElementById('surface-list');
+      if (surfList) surfList.innerHTML = product.surfaces.map(s => `<option value="${s}">`).join('');
+    }
+    // Set Size and Surface values after populating options
+    const sizeEl = document.getElementById('inp-Size');
+    if (sizeEl && data.Size) sizeEl.value = data.Size;
+    const surfEl = document.getElementById('inp-Surface');
+    if (surfEl && data.Surface) surfEl.value = data.Surface;
+
+    // Show image preview
+    const preview = document.getElementById('modal-img-preview');
+    const previewWrap = document.getElementById('modal-img-wrap');
+    if (preview && data.Product_Name) {
+      preview.src = getProductImage(data.Product_Name, data.Image_URL);
+      preview.onerror = function() { onImgError(this); };
+      preview.alt = data.Product_Name;
+      if (previewWrap) previewWrap.style.display = 'block';
+    }
+
+    // Pre-fill trial checkboxes
+    if (status.toLowerCase() === 'trial') {
+      const trial = state.trials.find(t => t.Product_Name === data.Product_Name) || {};
+      ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => {
+        const chk = document.getElementById(`chk-${id}`);
+        if (chk) chk.checked = String(trial[id]).toUpperCase() === "TRUE";
+      });
+    }
+  }
+
   function onProductChange(productName) {
     const product = PRODUCT_CATALOG.find(p => p.name === productName);
     if (product) {
-      const sizeEl = document.getElementById('inp-Size');
-      if (sizeEl) sizeEl.innerHTML = '<option value="">Select...</option>' + product.sizes.map(s => `<option value="${s}">${s}</option>`).join('');
-      const surfEl = document.getElementById('inp-Surface');
-      if (surfEl) surfEl.innerHTML = '<option value="">Select...</option>' + product.surfaces.map(s => `<option value="${s}">${s}</option>`).join('');
+      const sizeList = document.getElementById('size-list');
+      if (sizeList) sizeList.innerHTML = product.sizes.map(s => `<option value="${s}">`).join('');
+      const surfList = document.getElementById('surface-list');
+      if (surfList) surfList.innerHTML = product.surfaces.map(s => `<option value="${s}">`).join('');
     }
     const preview = document.getElementById('modal-img-preview');
+    const previewWrap = document.getElementById('modal-img-wrap');
     if (preview && productName) {
       const urlOverride = document.getElementById('inp-Image_URL');
       preview.src = getProductImage(productName, urlOverride ? urlOverride.value : '');
       preview.onerror = function() { onImgError(this); };
       preview.alt = productName;
-      preview.style.display = 'block';
+      if (previewWrap) previewWrap.style.display = 'block';
     }
   }
   window.onProductChange = onProductChange;
 
   function submitEntry() {
-    let p = { method: "SAVE" };
+    let p = {};
+    if (state.editingEntry) {
+      p.method = "UPDATE_ROW";
+      p.Original_Name = encodeURIComponent(state.editingEntry);
+    } else {
+      p.method = "SAVE";
+    }
     COLS.forEach(c => {
       const el = document.getElementById(`inp-${c}`);
       if (el) p[c] = el.value;
     });
     const imgUrl = document.getElementById('inp-Image_URL');
-    if (imgUrl && imgUrl.value.trim()) p['Image_URL'] = imgUrl.value.trim();
+    if (state.editingEntry) {
+      // Only update Image_URL if user explicitly changed it
+      const currentImgVal = imgUrl ? imgUrl.value.trim() : '';
+      if (currentImgVal !== (state.editingOriginalImageURL || '').trim()) {
+        p['Image_URL'] = currentImgVal;
+      } else if (currentImgVal) {
+        p['Image_URL'] = currentImgVal;
+      }
+    } else {
+      if (imgUrl && imgUrl.value.trim()) p['Image_URL'] = imgUrl.value.trim();
+    }
     if (state.curStatus.toLowerCase() === "trial") {
       ["Digital_White_1", "Digital_White_2", "Glu", "Gloss"].forEach(id => {
         p[id] = document.getElementById(`chk-${id}`).checked ? "TRUE" : "FALSE";
@@ -698,6 +879,8 @@
     fetch(`${API_URL}?${new URLSearchParams(p).toString()}`, { mode: 'no-cors' }).then(() => {
       setTimeout(() => { closeModal(); loadData(); }, 1200);
     });
+    state.editingEntry = null;
+    state.editingOriginalImageURL = null;
   }
 
   function updateStatus(name, s) {
@@ -706,7 +889,11 @@
     });
   }
 
-  function closeModal() { document.getElementById('modal').style.display = 'none'; }
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+    state.editingEntry = null;
+    state.editingOriginalImageURL = null;
+  }
   loadData();
 </script>
 </body>
